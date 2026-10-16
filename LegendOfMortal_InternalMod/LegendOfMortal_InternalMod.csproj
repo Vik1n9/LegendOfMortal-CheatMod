@@ -1,0 +1,115 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>LegendOfMortal_InternalMod</AssemblyName>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- 遊戲安裝路徑：預設為 Linux Steam 位置，其他環境用 dotnet build -p:GameDir=... 覆寫 -->
+    <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/LegendOfMortal</GameDir>
+    <GameManaged>$(GameDir)/Mortal_Data/Managed</GameManaged>
+    <Description>活俠傳 LegendOfMortal 內置MOD：骰子控制、選項提示與作弊功能（v1.0.6000.2 崆峒神威適用）。</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 讓 SDK 8 可以編譯 net48（免安裝完整 Framework） -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- BepInEx 5.4.23.5 stable（Unity Mono x64，Proton 相容；6.x 在 Wine 下預載崩潰故棄用） -->
+    <Reference Include="BepInEx">
+      <HintPath>libs/BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>libs/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Unity -->
+    <Reference Include="UnityEngine">
+      <HintPath>$(GameManaged)/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(GameManaged)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(GameManaged)/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(GameManaged)/UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameManaged)/UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(GameManaged)/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(GameManaged)/UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(GameManaged)/UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.InputSystem">
+      <HintPath>$(GameManaged)/Unity.InputSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Game -->
+    <Reference Include="Mortal.Core">
+      <HintPath>$(GameManaged)/Mortal.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Mortal.Story">
+      <HintPath>$(GameManaged)/Mortal.Story.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Mortal.Free">
+      <HintPath>$(GameManaged)/Mortal.Free.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Mortal.Combat">
+      <HintPath>$(GameManaged)/Mortal.Combat.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Mortal.Battle">
+      <HintPath>$(GameManaged)/Mortal.Battle.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Fungus">
+      <HintPath>$(GameManaged)/Fungus.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OBB.Framework">
+      <HintPath>$(GameManaged)/OBB.Framework.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 編譯後自動部署到遊戲 plugins；遊戲執行中時跳過（覆寫已載入的 DLL 可能讓遊戲崩潰） -->
+  <PropertyGroup>
+    <ModDeployDir>$(GameDir)/BepInEx/plugins/LegendOfMortal_InternalMod</ModDeployDir>
+  </PropertyGroup>
+
+  <Target Name="DeployToGame" AfterTargets="Build" Condition="Exists('$(ModDeployDir)')">
+    <!-- -x 比對進程名，避免像 pgrep -f 那樣匹配到自己的命令列 -->
+    <Exec Command="pgrep -x Mortal.exe" IgnoreExitCode="true" StandardOutputImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="GameRunningExit" />
+    </Exec>
+    <Warning Condition="'$(GameRunningExit)' == '0'" Text="遊戲執行中，未部署 DLL；關閉遊戲後重新編譯" />
+    <Copy Condition="'$(GameRunningExit)' != '0'" SourceFiles="$(TargetPath)" DestinationFolder="$(ModDeployDir)" />
+    <Message Condition="'$(GameRunningExit)' != '0'" Importance="high" Text="已部署 → $(ModDeployDir)" />
+  </Target>
+
+</Project>

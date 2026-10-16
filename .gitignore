@@ -1,0 +1,21 @@
+# Build 輸出（可重編，不進版控）
+LegendOfMortal_InternalMod/bin/
+LegendOfMortal_InternalMod/obj/
+*.user
+
+# 執行期日誌與快取
+*.log
+output_log.txt
+**/BepInEx/cache/
+**/BepInEx/LogOutput.log
+preloader_*.log
+
+# 系統與編輯器
+.DS_Store
+Thumbs.db
+.vs/
+.idea/
+*~
+
+# 發行包輸出
+dist/

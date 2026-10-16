@@ -8,7 +8,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PROJ="$(dirname "$HERE")"
 REPO="$(dirname "$PROJ")"
-DIST="$REPO/dist"
+DIST="${DIST:-$REPO/dist}"   # 可用環境變數覆寫輸出位置
 CACHE="$DIST/.cache"
 DOTNET="${DOTNET:-$HOME/.dotnet/dotnet}"
 
@@ -32,7 +32,7 @@ if [ ! -f "$CACHE/$BEPINEX_ZIP" ]; then
 fi
 echo "$BEPINEX_SHA256  $CACHE/$BEPINEX_ZIP" | sha256sum -c --quiet
 
-# 3. 組目錄：README 轉成 Windows 記事本友善的 UTF-8 BOM + CRLF
+# 3. 組目錄：README/LICENSE 轉成 Windows 記事本友善的 CRLF（README 另加 UTF-8 BOM）
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 readme() { printf '\xEF\xBB\xBF'; sed "s/{VERSION}/$VERSION/" "$HERE/README.txt" | sed 's/$/\r/'; }
@@ -43,6 +43,7 @@ for root in "$STAGE/full" "$STAGE/plugin"; do
     mkdir -p "$root/BepInEx/plugins/LegendOfMortal_InternalMod"
     cp "$DLL" "$root/BepInEx/plugins/LegendOfMortal_InternalMod/"
     readme > "$root/README.txt"
+    sed 's/$/\r/' "$REPO/LICENSE" > "$root/LICENSE.txt"
 done
 
 # 4. 壓縮（檔名全 ASCII，避免 Windows 解壓亂碼）

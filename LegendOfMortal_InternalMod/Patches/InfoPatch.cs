@@ -208,14 +208,13 @@ namespace LegendOfMortal_InternalMod.Patches
             }
         }
 
+        // 1.0.6001.0 起回想改為 StoryLogPanel，Fungus NarrativeLog 不再顯示於任何介面。
+        // isSave = false：不寫入存檔，移除 MOD 後不會在玩家存檔留下紀錄（讀檔後即清除）。
         private static void PrintToNarrativeLog(string message)
         {
             string text = Regex.Replace(message, @"^\s*$\n|\r", string.Empty, RegexOptions.Multiline).Trim();
-            var log = FungusManager.Instance?.NarrativeLog;
-            if (log != null)
-            {
-                log.AddLine(new NarrativeLogEntry { name = "內置MOD", text = "<size=18>" + text + "</size>" });
-            }
+            if (text.Length == 0) return;
+            StoryLogData.AddText("<size=18>【內置MOD】" + text + "</size>", false);
         }
     }
 }

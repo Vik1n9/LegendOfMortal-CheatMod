@@ -1,6 +1,6 @@
 # LegendOfMortal-CheatMod
 
-《活俠傳》（Legend of Mortal）內置 MOD，適用 Steam 版 **1.0.6001.0** 以上（1.0.6000.x 請使用 MOD v1.0），支援 Windows 與 Linux / Steam Deck。
+《活俠傳》（Legend of Mortal）內置 MOD，適用 Steam 版 **1.0.6001.0（崆峒神威）** 以上（1.0.6000.x 請使用 MOD v1.0），支援 Windows 與 Linux / Steam Deck。
 
 ## 安裝
 

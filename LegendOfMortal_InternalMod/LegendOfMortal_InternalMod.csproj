@@ -11,7 +11,7 @@
     <!-- 遊戲安裝路徑：預設為 Linux Steam 位置，其他環境用 dotnet build -p:GameDir=... 覆寫 -->
     <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/LegendOfMortal</GameDir>
     <GameManaged>$(GameDir)/Mortal_Data/Managed</GameManaged>
-    <Description>活俠傳 LegendOfMortal 內置MOD：骰子控制、選項提示與作弊功能（v1.0.6000.2 崆峒神威適用）。</Description>
+    <Description>活俠傳 LegendOfMortal 內置MOD：骰子控制、選項提示與作弊功能（v1.0.6001.0 崆峒神威適用）。</Description>
   </PropertyGroup>
 
   <ItemGroup>

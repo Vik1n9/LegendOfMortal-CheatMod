@@ -1,10 +1,10 @@
 # LegendOfMortal-CheatMod
 
-《活俠傳》（Legend of Mortal）內置 MOD，適用 Steam 版 **1.0.6000.2（崆峒神威）**，支援 Windows 與 Linux / Steam Deck。
+《活俠傳》（Legend of Mortal）內置 MOD，適用 Steam 版 **1.0.6001.0（崆峒神威）** 以上（1.0.6000.x 請使用 MOD v1.0），支援 Windows 與 Linux / Steam Deck。
 
 ## 安裝
 
-1. 到 [Releases](../../releases/latest) 下載 `LegendOfMortal_InternalMod_v1.0_full.zip`。
+1. 到 [Releases](../../releases/latest) 下載 `LegendOfMortal_InternalMod_v1.1_full.zip`。
    （已安裝 BepInEx 5 的玩家可改下載 `plugin_only` 版。）
 2. Steam 收藏庫對《活俠傳》按右鍵 → 管理 → 瀏覽本機檔案。
 3. 把壓縮檔內容全部解壓到該資料夾（`winhttp.dll` 要和 `Mortal.exe` 在同一層）。

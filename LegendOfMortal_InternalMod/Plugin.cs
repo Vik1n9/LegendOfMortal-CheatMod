@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace LegendOfMortal_InternalMod
 {
-    [BepInPlugin("LegendOfMortal_InternalMod", "活俠傳內置MOD", "1.0")]
+    [BepInPlugin("LegendOfMortal_InternalMod", "活俠傳內置MOD", "1.1")]
     public class Plugin : BaseUnityPlugin
     {
         public static Plugin Instance { get; private set; }
@@ -35,7 +35,7 @@ namespace LegendOfMortal_InternalMod
             Patch(typeof(Patches.PracticeCheatPatch), ModConfig.EnableCheats.Value, "練功作弊");
             Patch(typeof(Patches.FriendshipCheatPatch), ModConfig.EnableCheats.Value, "好感作弊");
             Patch(typeof(Patches.CombatSinglePatch), ModConfig.EnableCheats.Value, "單挑作弊");
-            LogInfo("內置MOD v1.0 載入成功（適配 v1.0.6000.2 崆峒神威）");
+            LogInfo("內置MOD v1.1 載入成功（適配 v1.0.6001.0 崆峒神威）");
 
             // Update/OnGUI 交給自建常駐物件，不依賴 BepInEx_Manager 存活
             ModRunner.Ensure("Awake");

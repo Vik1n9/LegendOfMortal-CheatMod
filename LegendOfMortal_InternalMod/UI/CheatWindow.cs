@@ -169,7 +169,7 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.Label("只影響一般遊玩，不會干擾暫停與劇情快轉。", S.Desc);
 
             Section("關於");
-            GUILayout.Label("活俠傳內置 MOD v1.0（適用 崆峒神威 1.0.6000.2）", S.Desc);
+            GUILayout.Label("活俠傳內置 MOD v1.1（適用 崆峒神威 1.0.6001.0）", S.Desc);
             GUILayout.Label("設定檔：BepInEx/config/LegendOfMortal_InternalMod.cfg", S.Desc);
         }
 

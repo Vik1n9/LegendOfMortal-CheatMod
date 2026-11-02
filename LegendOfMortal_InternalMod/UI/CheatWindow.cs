@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using LegendOfMortal_InternalMod.Core;
 using LegendOfMortal_InternalMod.Features;
 using LegendOfMortal_InternalMod.Patches;
 using Mortal.Core;
@@ -10,7 +13,7 @@ namespace LegendOfMortal_InternalMod.UI
 {
     /// <summary>
     /// 主視窗「唐門密卷」：F1 開關，拖曳標題列移動。
-    /// 分頁：骰子選項／屬性銀兩／戰鬥養成／事件任務／系統
+    /// 分頁：骰子選項／屬性銀兩／戰鬥養成／事件攻略／事件任務／系統
     /// </summary>
     public static class CheatWindow
     {
@@ -25,7 +28,7 @@ namespace LegendOfMortal_InternalMod.UI
         private static float rectScale;
         private static Vector2 scroll;
         private static int tab;
-        private static readonly string[] tabs = { "骰子選項", "屬性銀兩", "戰鬥養成", "事件任務", "系統" };
+        private static readonly string[] tabs = { "骰子選項", "屬性銀兩", "戰鬥養成", "事件攻略", "事件任務", "系統" };
 
         private static string diceIn, moneyIn = "0", fateIn = "0", statIn = "100";
 
@@ -61,8 +64,9 @@ namespace LegendOfMortal_InternalMod.UI
                     case 0: DrawDice(); break;
                     case 1: DrawStats(); break;
                     case 2: DrawBattle(); break;
-                    case 3: DrawMissions(plugin); break;
-                    case 4: DrawSystem(); break;
+                    case 3: DrawGuide(); break;
+                    case 4: DrawMissions(plugin); break;
+                    case 5: DrawSystem(); break;
                 }
             }
             finally { GUILayout.EndScrollView(); }
@@ -131,6 +135,99 @@ namespace LegendOfMortal_InternalMod.UI
             Cfg.MaxFriendship.Value = Check(Cfg.MaxFriendship.Value, "好感只升不降（含小梅、小竹結緣線）");
         }
 
+        // ---- 事件攻略 ----
+        private static readonly (string Name, GameStatType Type)[] GuideStats =
+        {
+            ("心相", GameStatType.心理衛生), ("修養", GameStatType.修養), ("性情", GameStatType.性情), ("處世", GameStatType.處世),
+            ("道德", GameStatType.道德), ("學問", GameStatType.學問), ("名聲", GameStatType.門派名聲), ("門派規模", GameStatType.門派規模),
+            ("貢獻度", GameStatType.個人貢獻度), ("行動次數", GameStatType.行動次數),
+        };
+        private static bool guideUpcoming = true;
+        private static List<GuideItem> guideItems;
+        private static int guideNow;
+        private static string guideRoute, guideError;
+        private static float guideNextRefresh;
+
+        // OnGUI 每幀呼叫，判定結果每秒重算一次即可；只在 Layout 事件更新，避免同一幀版面前後不一致
+        private static void RefreshGuide()
+        {
+            if (Event.current.type != EventType.Layout || Time.unscaledTime < guideNextRefresh) return;
+            guideNextRefresh = Time.unscaledTime + 1f;
+            try
+            {
+                var mgr = PlayerStatManagerData.Instance;
+                if (mgr == null || MissionManagerData.Instance == null) { guideError = "請先載入存檔"; return; }
+                guideNow = mgr.GameTime.ConvertToRounds();
+                guideRoute = EventGuide.RouteText(EventGuide.PlayerRoutes(guideNow));
+                guideItems = EventGuide.Evaluate(guideNow, guideUpcoming);
+                guideError = null;
+            }
+            catch (Exception ex)
+            {
+                guideError = "請先載入存檔";
+                Plugin.LogError("事件攻略: " + ex.Message);
+            }
+        }
+
+        private static void DrawGuide()
+        {
+            RefreshGuide();
+            if (guideItems == null || guideError != null)
+            {
+                GUILayout.Space(S.Px(40));
+                GUILayout.Label(guideError ?? "讀取中…", S.Title);
+                return;
+            }
+
+            Section("目前狀況");
+            GUILayout.Label($"<b>{EventGuide.FormatRound(guideNow)}</b>　·　路線：{guideRoute}", S.Entry);
+            const int cols = 5;
+            for (int i = 0; i < GuideStats.Length; i += cols)
+            {
+                GUILayout.BeginHorizontal();
+                for (int c = 0; c < cols && i + c < GuideStats.Length; c++)
+                {
+                    // 每欄標籤寬度取該欄最長字數，上下列對齊、整列又不超出視窗
+                    int len = 0;
+                    for (int j = c; j < GuideStats.Length; j += cols) len = Math.Max(len, GuideStats[j].Name.Length);
+                    var (name, type) = GuideStats[i + c];
+                    GUILayout.Label(name, S.Row, GUILayout.Width(S.Px(20 * len + 12)));
+                    GUILayout.Label(CheatEngine.GetStat(type).ToString(), S.RowEntry, GUILayout.Width(S.Px(48)));
+                    GUILayout.Space(S.Px(16));
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+            }
+            bool up = Check(guideUpcoming, $"顯示即將開始（未來 {EventGuide.Lookahead} 旬內）");
+            if (up != guideUpcoming) { guideUpcoming = up; guideNextRefresh = 0; }
+            GUILayout.Label("事件與條件依活俠傳 wiki 整理；灰字「另需」為程式無法判定的條件，請自行確認。", S.Desc);
+
+            GuideSection("本旬可觸發", GuideState.Ready);
+            GuideSection("條件不足", GuideState.Lacking);
+            if (guideUpcoming) GuideSection("即將開始", GuideState.Upcoming);
+        }
+
+        private static void GuideSection(string title, GuideState state)
+        {
+            Section(title);
+            var items = guideItems.Where(i => i.State == state).ToList();
+            if (items.Count == 0) { GUILayout.Label("目前沒有對應事件", S.Desc); return; }
+            foreach (var it in items)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(it.Event.Name, S.Entry);
+                GUILayout.FlexibleSpace();
+                if (state == GuideState.Upcoming) GUILayout.Label(EventGuide.FormatRound(it.Event.Start), S.Desc);
+                GUILayout.EndHorizontal();
+                if (it.Missing.Count > 0) GUILayout.Label(OnPaper(RichText.Red("缺：" + string.Join("、", it.Missing))), S.Desc);
+                if (it.Met.Count > 0) GUILayout.Label(OnPaper(RichText.Green("已達：" + string.Join("、", it.Met))), S.Desc);
+                if (it.Notes.Count > 0) GUILayout.Label(OnPaper(RichText.Gray("另需：" + string.Join("、", it.Notes))), S.Desc);
+                GUILayout.EndVertical();
+                GUILayout.Space(S.Px(6));
+            }
+        }
+
         private static void DrawMissions(Plugin plugin)
         {
             if (plugin.Events.Count + plugin.Missions.Count == 0)
@@ -169,7 +266,7 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.Label("只影響一般遊玩，不會干擾暫停與劇情快轉。", S.Desc);
 
             Section("關於");
-            GUILayout.Label("活俠傳內置 MOD v1.1（適用 崆峒神威 1.0.6001.0）", S.Desc);
+            GUILayout.Label("活俠傳內置 MOD v1.2beta（適用 崆峒神威 1.0.6001.0）", S.Desc);
             GUILayout.Label("設定檔：BepInEx/config/LegendOfMortal_InternalMod.cfg", S.Desc);
         }
 

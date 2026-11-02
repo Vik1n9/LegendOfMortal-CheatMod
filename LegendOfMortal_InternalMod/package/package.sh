@@ -16,7 +16,9 @@ BEPINEX_ZIP="BepInEx_win_x64_5.4.23.5.zip"
 BEPINEX_URL="https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/$BEPINEX_ZIP"
 BEPINEX_SHA256="82f9878551030f54657792c0740d9d51a09500eeae1fba21106b0c441e6732c4"
 
-VERSION="$(grep -oP 'BepInPlugin\("[^"]+", "[^"]+", "\K[0-9.]+' "$PROJ/Plugin.cs")"
+# BepInPlugin 版本只能是純數字；測試版可用 RELEASE_VERSION=1.2beta 覆寫發行檔名
+# （不用 VERSION：環境變數會被 MSBuild 當成 Version 屬性）
+VERSION="${RELEASE_VERSION:-$(grep -oP 'BepInPlugin\("[^"]+", "[^"]+", "\K[0-9.]+' "$PROJ/Plugin.cs")}"
 NAME="LegendOfMortal_InternalMod_v$VERSION"
 echo "版本 $VERSION"
 
@@ -49,8 +51,13 @@ done
 # 4. 壓縮（檔名全 ASCII，避免 Windows 解壓亂碼）
 mkdir -p "$DIST"
 rm -f "$DIST/${NAME}_full.zip" "$DIST/${NAME}_plugin_only.zip"
-(cd "$STAGE/full" && zip -qrX "$DIST/${NAME}_full.zip" .)
-(cd "$STAGE/plugin" && zip -qrX "$DIST/${NAME}_plugin_only.zip" .)
+# Git Bash 沒有 zip，改用 Python 標準庫
+pack() {
+    if command -v zip >/dev/null; then (cd "$1" && zip -qrX "$2" .)
+    else (shopt -s dotglob; python -I -m zipfile -c "$2" "$1"/*); fi
+}
+pack "$STAGE/full" "$DIST/${NAME}_full.zip"
+pack "$STAGE/plugin" "$DIST/${NAME}_plugin_only.zip"
 
 cd "$DIST"
 sha256sum "${NAME}_full.zip" "${NAME}_plugin_only.zip" > "${NAME}_SHA256SUMS.txt"

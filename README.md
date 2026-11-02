@@ -6,6 +6,7 @@
 
 1. 到 [Releases](../../releases/latest) 下載 `LegendOfMortal_InternalMod_v1.1_full.zip`。
    （已安裝 BepInEx 5 的玩家可改下載 `plugin_only` 版。）
+   想試用新增「事件攻略」的測試版，請到 [v1.2beta](../../releases/tag/v1.2beta) 下載 `LegendOfMortal_InternalMod_v1.2beta_full.zip`。
 2. Steam 收藏庫對《活俠傳》按右鍵 → 管理 → 瀏覽本機檔案。
 3. 把壓縮檔內容全部解壓到該資料夾（`winhttp.dll` 要和 `Mortal.exe` 在同一層）。
 4. **Linux / Steam Deck** 另需在 Steam → 內容 → 一般 → 啟動選項填入：
@@ -32,5 +33,6 @@
 | 骰子選項 | 指定天命骰子點數；在劇情選項後顯示結果（如 +銀兩） |
 | 屬性銀兩 | 設定銀兩、命運；回滿／無限行動點；人物屬性；門派數值 |
 | 戰鬥養成 | 單挑／群戰我方無敵、群戰一擊必殺、技能無冷卻、戰鬥不限時；練功不消耗、快速練功、好感只升不降 |
+| 事件攻略 | 依目前日期、路線與參數，列出本旬可觸發、條件不足（缺哪些參數）、即將開始的主支線事件（依 [wiki 主支線簡易表格](https://smilin.net/LoM-wiki/event/story-simple-table.html) 整理） |
 | 事件任務 | 列出目前地點可觸發的養成事件並可指定必出；列出支線任務與條件並可設為必定通過 |
 | 系統 | 遊戲速度 0.5～5 倍 |

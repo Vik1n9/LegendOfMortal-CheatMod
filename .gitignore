@@ -19,3 +19,5 @@ Thumbs.db
 
 # 發行包輸出
 dist/
+tools/guide-verify/bin/
+tools/guide-verify/obj/

@@ -13,7 +13,7 @@ namespace LegendOfMortal_InternalMod.UI
 {
     /// <summary>
     /// 主視窗「唐門密卷」：F1 開關，拖曳標題列移動。
-    /// 分頁：骰子選項／屬性銀兩／戰鬥養成／事件攻略／事件任務／系統
+    /// 分頁：骰子選項／屬性銀兩／戰鬥養成／事件攻略（路線地圖・本旬事件・結局圖鑑）／事件任務／系統
     /// </summary>
     public static class CheatWindow
     {
@@ -142,6 +142,8 @@ namespace LegendOfMortal_InternalMod.UI
             ("道德", GameStatType.道德), ("學問", GameStatType.學問), ("名聲", GameStatType.門派名聲), ("門派規模", GameStatType.門派規模),
             ("貢獻度", GameStatType.個人貢獻度), ("行動次數", GameStatType.行動次數),
         };
+        private static readonly string[] guideSubs = { "路線地圖", "本旬事件", "結局圖鑑" };
+        private static int guideSub;
         private static bool guideUpcoming = true;
         private static List<GuideItem> guideItems;
         private static int guideNow;
@@ -198,6 +200,21 @@ namespace LegendOfMortal_InternalMod.UI
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
             }
+            GUILayout.Space(S.Px(8));
+            guideSub = GUILayout.Toolbar(guideSub, guideSubs, S.Tab);
+            GUILayout.Space(S.Px(6));
+            var routes = EventGuide.PlayerRoutes(guideNow);
+            switch (guideSub)
+            {
+                case 0: GuideMapView.DrawMap(guideNow, routes); break;
+                case 1: DrawGuideEvents(); break;
+                default: GuideMapView.DrawEndings(guideNow, routes); break;
+            }
+            if (GuideMapView.ScrollRequest is float y) { scroll.y = y; GuideMapView.ScrollRequest = null; }
+        }
+
+        private static void DrawGuideEvents()
+        {
             bool up = Check(guideUpcoming, $"顯示即將開始（未來 {EventGuide.Lookahead} 旬內）");
             if (up != guideUpcoming) { guideUpcoming = up; guideNextRefresh = 0; }
             GUILayout.Label("事件與條件依活俠傳 wiki 整理；灰字「另需」為程式無法判定的條件，請自行確認。", S.Desc);
@@ -351,7 +368,7 @@ namespace LegendOfMortal_InternalMod.UI
         }
 
         /// <summary>RichText 的亮色是給遊戲深色底用的，在紙底上換成同色系的深色。</summary>
-        private static string OnPaper(string s) => s
+        internal static string OnPaper(string s) => s
             .Replace("#FFD700", "#8A5A00").Replace("#7CFC00", "#2E7D32")
             .Replace("#FF6B6B", "#B3261E").Replace("#AAAAAA", "#7A6E62");
     }

@@ -20,25 +20,25 @@ namespace LegendOfMortal_InternalMod.Core
             => new() { Name = name, Start = from, End = to, Route = route, Reqs = reqs };
 
         // ---- 條件 ----
-        private static Req Stat(G t, string label, Op op, int v) => new ValueReq { Label = label, Read = () => EventGuide.Stat(t), Op = op, Value = v };
-        private static Req 心相(Op op, int v) => Stat(G.心理衛生, "心相", op, v);
-        private static Req 修養(Op op, int v) => Stat(G.修養, "修養", op, v);
-        private static Req 名聲(Op op, int v) => Stat(G.門派名聲, "名聲", op, v);
-        private static Req 貢獻度(Op op, int v) => Stat(G.個人貢獻度, "貢獻度", op, v);
-        private static Req 行動次數(Op op, int v) => Stat(G.行動次數, "行動次數", op, v);
-        private static Req Rel(R t, Op op, int v) => new ValueReq { Label = t + "好感", Read = () => EventGuide.Rel(t), Op = op, Value = v };
-        private static Req Count(string id, string label, Op op, int v) => new ValueReq { Label = label, Read = () => EventGuide.Flag(id), Op = op, Value = v };
-        private static Req Flag(string id, string label) => new FlagReq { Id = id, Label = label, Op = Op.Ge, Value = 1 };
-        private static Req FlagIs(string id, int v, string label) => new FlagReq { Id = id, Label = label, Op = Op.Eq, Value = v };
-        private static Req NoFlag(string id, string label) => new FlagReq { Id = id, Label = label, Op = Op.Eq, Value = 0 };
-        private static Req Either(params Req[] items) => new AnyReq { Label = "任一", Items = items };
-        private static Req Note(string text) => new NoteReq { Label = text };
+        internal static Req Stat(G t, string label, Op op, int v) => new ValueReq { Label = label, Read = () => EventGuide.Stat(t), Op = op, Value = v };
+        internal static Req 心相(Op op, int v) => Stat(G.心理衛生, "心相", op, v);
+        internal static Req 修養(Op op, int v) => Stat(G.修養, "修養", op, v);
+        internal static Req 名聲(Op op, int v) => Stat(G.門派名聲, "名聲", op, v);
+        internal static Req 貢獻度(Op op, int v) => Stat(G.個人貢獻度, "貢獻度", op, v);
+        internal static Req 行動次數(Op op, int v) => Stat(G.行動次數, "行動次數", op, v);
+        internal static Req Rel(R t, Op op, int v) => new ValueReq { Label = t + "好感", Read = () => EventGuide.Rel(t), Op = op, Value = v };
+        internal static Req Count(string id, string label, Op op, int v) => new ValueReq { Label = label, Read = () => EventGuide.Flag(id), Op = op, Value = v };
+        internal static Req Flag(string id, string label) => new FlagReq { Id = id, Label = label, Op = Op.Ge, Value = 1 };
+        internal static Req FlagIs(string id, int v, string label) => new FlagReq { Id = id, Label = label, Op = Op.Eq, Value = v };
+        internal static Req NoFlag(string id, string label) => new FlagReq { Id = id, Label = label, Op = Op.Eq, Value = 0 };
+        internal static Req Either(params Req[] items) => new AnyReq { Label = "任一", Items = items };
+        internal static Req Note(string text) => new NoteReq { Label = text };
 
         // 常用旗標
-        private static Req 趙活在唐門 => NoFlag("E11000", "趙活在唐門");
-        private static Req 四師兄在唐門 => NoFlag("E10005", "四師兄在唐門");
-        private static Req 葉雲裳在唐門 => Flag("E12000", "葉雲裳在唐門");
-        private static Req 收留葉氏兄妹 => Flag("M10001", "曾收留葉氏兄妹");
+        internal static Req 趙活在唐門 => NoFlag("E11000", "趙活在唐門");
+        internal static Req 四師兄在唐門 => NoFlag("E10005", "四師兄在唐門");
+        internal static Req 葉雲裳在唐門 => Flag("E12000", "葉雲裳在唐門");
+        internal static Req 收留葉氏兄妹 => Flag("M10001", "曾收留葉氏兄妹");
 
         public static readonly GuideEvent[] All =
         {
@@ -273,7 +273,7 @@ namespace LegendOfMortal_InternalMod.Core
             E("劍聖傳承", T(4, 2, 3), 西武林, Note("劍聖傳承前置；點選大門")),
         };
 
-        private static Req 伴侶 => Either(
+        internal static Req 伴侶 => Either(
             Flag("M70060", "可陪伴小師妹"), Flag("M70061", "可陪伴葉雲裳"), Flag("M70062", "可陪伴上官螢"),
             Flag("M70063", "可陪伴龍湘"), Flag("M70064", "可陪伴夏侯蘭"));
     }

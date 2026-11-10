@@ -44,8 +44,8 @@ namespace LegendOfMortal_InternalMod.Core
             string text = array[0];
             text = actionType switch
             {
-                "Player" => DataHelper.TryParseEnum<GameStatType>(text, out GameStatType r) ? r.ToString() : text,
-                "UpdateSetPlayerStat" => DataHelper.TryParseEnum<GameStatType>(text, out GameStatType r2) ? r2.ToString() : text,
+                "Player" => DataHelper.GetStatName(text),
+                "UpdateSetPlayerStat" => DataHelper.GetStatName(text),
                 "Character" => DataHelper.TryParseEnum<RelationshipStatType>(text, out RelationshipStatType r3) ? r3.ToString() : text,
                 "AddBook" => DataHelper.GetItemName((GameItemType)1, text),
                 "AddMisc" => DataHelper.GetItemName((GameItemType)2, text),

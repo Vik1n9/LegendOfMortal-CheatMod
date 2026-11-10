@@ -13,7 +13,7 @@ namespace LegendOfMortal_InternalMod.UI
 {
     /// <summary>
     /// 主視窗「唐門密卷」：F1 開關，拖曳標題列移動。
-    /// 分頁：骰子選項／屬性銀兩／戰鬥養成／事件攻略／事件任務／系統
+    /// 分頁：骰子選項／屬性銀兩／戰鬥養成／事件攻略（路線地圖・本旬事件・結局圖鑑）／事件任務／系統
     /// </summary>
     public static class CheatWindow
     {
@@ -23,17 +23,17 @@ namespace LegendOfMortal_InternalMod.UI
         public static Rect WindowRect => rect;
 
         private const int WindowId = 2077;
-        private const float BaseW = 780f, BaseScrollH = 600f;
+        private const float BaseW = 845f, BaseScrollH = 600f;   // 845：容納 7 個分頁（含「雜物」），避免分頁列把視窗撐寬
         private static Rect rect;
         private static float rectScale;
         private static Vector2 scroll;
         private static int tab;
-        private static readonly string[] tabs = { "骰子選項", "屬性銀兩", "戰鬥養成", "事件攻略", "事件任務", "系統" };
+        private static readonly string[] tabs = { "骰子選項", "屬性銀兩", "戰鬥養成", "事件攻略", "事件任務", "雜物", "系統" };
 
         private static string diceIn, moneyIn = "0", fateIn = "0", statIn = "100";
 
         private static readonly GameStatType[] PersonStats =
-            { GameStatType.體力, GameStatType.內力, GameStatType.輕功, GameStatType.魅力, GameStatType.學問, GameStatType.嘴力, GameStatType.道德, GameStatType.修養 };
+            { GameStatType.體力, GameStatType.內力, GameStatType.陰陽內功, GameStatType.輕功, GameStatType.魅力, GameStatType.學問, GameStatType.嘴力, GameStatType.道德, GameStatType.修養, GameStatType.心理衛生 };
         private static readonly GameStatType[] SectStats =
             { GameStatType.門派資產, GameStatType.門派名聲, GameStatType.門派人數, GameStatType.向心力, GameStatType.個人貢獻度 };
 
@@ -57,6 +57,9 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.Space(S.Px(10));
 
             scroll = GUILayout.BeginScrollView(scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUILayout.Height(S.Px(BaseScrollH)));
+            // 固定內容寬度＝視窗內寬扣掉捲軸，避免右側（例：即將開始的日期）被捲軸蓋住或裁掉
+            float contentW = S.Px(BaseW) - GUI.skin.window.padding.horizontal - GUI.skin.verticalScrollbar.fixedWidth - S.Px(14);
+            GUILayout.BeginVertical(GUILayout.Width(contentW));
             try
             {
                 switch (tab)
@@ -66,10 +69,11 @@ namespace LegendOfMortal_InternalMod.UI
                     case 2: DrawBattle(); break;
                     case 3: DrawGuide(); break;
                     case 4: DrawMissions(plugin); break;
-                    case 5: DrawSystem(); break;
+                    case 5: DrawItems(); break;
+                    case 6: DrawSystem(); break;
                 }
             }
-            finally { GUILayout.EndScrollView(); }
+            finally { GUILayout.EndVertical(); GUILayout.EndScrollView(); }
 
             GUILayout.Space(S.Px(6));
             GUILayout.Label($"{Cfg.MainMenuKey.Value} 開關視窗　·　拖曳標題列可移動", S.Desc);
@@ -115,6 +119,11 @@ namespace LegendOfMortal_InternalMod.UI
             int target = StatTargetRow();
             StatGrid(PersonStats, target);
 
+            GUILayout.Space(S.Px(6));
+            StatStateRow(GameStatType.心理衛生, "心相狀態");
+            StatStateRow(GameStatType.陰陽內功, "陰陽內功");
+            GUILayout.Label("切換狀態會把數值移到該狀態範圍（最高狀態＝上限），不影響其他數值。", S.Desc);
+
             Section("門派");
             GUILayout.Label("請先打開門派介面再設定，數值同上方「設定值」。", S.Desc);
             StatGrid(SectStats, target);
@@ -130,9 +139,14 @@ namespace LegendOfMortal_InternalMod.UI
             BattleCheatPatch.InfTime = Check(BattleCheatPatch.InfTime, "戰鬥不限時");
 
             Section("養成");
-            Cfg.InfPractice.Value = Check(Cfg.InfPractice.Value, "練功不消耗");
-            Cfg.FastPractice.Value = Check(Cfg.FastPractice.Value, "快速練功");
-            Cfg.MaxFriendship.Value = Check(Cfg.MaxFriendship.Value, "好感只升不降（含小梅、小竹結緣線）");
+            Cfg.InfPractice.Value = Check(Cfg.InfPractice.Value, "武學：不消耗");
+            Cfg.FastPractice.Value = Check(Cfg.FastPractice.Value, "武學：快速升級");
+            Cfg.InfAlchemy.Value = Check(Cfg.InfAlchemy.Value, "煉丹：不消耗");
+            Cfg.FastAlchemy.Value = Check(Cfg.FastAlchemy.Value, "煉丹：快速升級");
+            Cfg.InfForge.Value = Check(Cfg.InfForge.Value, "鍛造：不消耗");
+            Cfg.FastForge.Value = Check(Cfg.FastForge.Value, "鍛造：快速升級");
+            GUILayout.Label("不消耗：升級不扣點數／銀兩／次數。快速升級：每次點擊直接升一級（同樣不扣）。武學、煉丹、鍛造互不影響。", S.Desc);
+            Cfg.MaxFriendship.Value = Check(Cfg.MaxFriendship.Value, "好感只升不降");
         }
 
         // ---- 事件攻略 ----
@@ -142,6 +156,8 @@ namespace LegendOfMortal_InternalMod.UI
             ("道德", GameStatType.道德), ("學問", GameStatType.學問), ("名聲", GameStatType.門派名聲), ("門派規模", GameStatType.門派規模),
             ("貢獻度", GameStatType.個人貢獻度), ("行動次數", GameStatType.行動次數),
         };
+        private static readonly string[] guideSubs = { "路線地圖", "本旬事件", "結局圖鑑" };
+        private static int guideSub;
         private static bool guideUpcoming = true;
         private static List<GuideItem> guideItems;
         private static int guideNow;
@@ -198,6 +214,21 @@ namespace LegendOfMortal_InternalMod.UI
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
             }
+            GUILayout.Space(S.Px(8));
+            guideSub = GUILayout.Toolbar(guideSub, guideSubs, S.Tab);
+            GUILayout.Space(S.Px(6));
+            var routes = EventGuide.PlayerRoutes(guideNow);
+            switch (guideSub)
+            {
+                case 0: GuideMapView.DrawMap(guideNow, routes); break;
+                case 1: DrawGuideEvents(); break;
+                default: GuideMapView.DrawEndings(guideNow, routes); break;
+            }
+            if (GuideMapView.ScrollRequest is float y) { scroll.y = y; GuideMapView.ScrollRequest = null; }
+        }
+
+        private static void DrawGuideEvents()
+        {
             bool up = Check(guideUpcoming, $"顯示即將開始（未來 {EventGuide.Lookahead} 旬內）");
             if (up != guideUpcoming) { guideUpcoming = up; guideNextRefresh = 0; }
             GUILayout.Label("事件與條件依活俠傳 wiki 整理；灰字「另需」為程式無法判定的條件，請自行確認。", S.Desc);
@@ -251,6 +282,69 @@ namespace LegendOfMortal_InternalMod.UI
                 foreach (var m in plugin.Missions)
                     EntryCard(m.Key, m.Desc, InfoPatch.TargetMission == m.M ? "已選定" : "必定通過", () => InfoPatch.TargetMission = m.M);
             }
+        }
+
+        // ---- 雜物 ----
+        private static string itemSearch = string.Empty;
+        private static string itemCountIn = "10";
+        private static bool itemOwnedOnly;
+        private static readonly List<(ItemData Item, string Name)> itemCache = new List<(ItemData, string)>();
+
+        private static void DrawItems()
+        {
+            Section("雜物數量");
+            GUILayout.Label("修改背包「雜物」的數量（藥品、食物等可使用的道具）。書籍與寶物不受影響；改完開一次背包或商店即可看到。", S.Desc);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("搜尋", S.Row, GUILayout.Width(S.Px(110)));
+            itemSearch = GUILayout.TextField(itemSearch ?? string.Empty, GUILayout.Width(S.Px(200)));
+            if (GUILayout.Button("清除", GUILayout.Width(S.Px(60)))) itemSearch = string.Empty;
+            GUILayout.Space(S.Px(10));
+            itemOwnedOnly = Check(itemOwnedOnly, "只顯示已持有");
+            if (GUILayout.Button("重新整理", GUILayout.Width(S.Px(90)))) itemCache.Clear();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("數量", S.Row, GUILayout.Width(S.Px(110)));
+            itemCountIn = GUILayout.TextField(itemCountIn ?? string.Empty, GUILayout.Width(S.Px(90)));
+            GUILayout.Label("「設為」直接設定；「＋N」在現有數量上累加。", S.Desc);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(S.Px(6));
+            EnsureItemCache();
+            int amount = int.TryParse(itemCountIn, out var parsed) ? parsed : 0;
+            string filter = (itemSearch ?? string.Empty).Trim();
+            int shown = 0;
+            foreach (var entry in itemCache)
+            {
+                if (itemOwnedOnly && entry.Item.CurrentCount <= 0) continue;
+                if (filter.Length > 0 && !Matches(entry, filter)) continue;
+                if (++shown > 400) { GUILayout.Label("筆數過多，請用搜尋縮小範圍。", S.Desc); break; }
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(entry.Name, S.Row, GUILayout.Width(S.Px(300)));
+                GUILayout.Label(entry.Item.CurrentCount.ToString(), S.RowEntry, GUILayout.Width(S.Px(70)));
+                if (GUILayout.Button("設為", GUILayout.Width(S.Px(70)))) ItemCheat.Set(entry.Item, amount);
+                if (GUILayout.Button("＋" + amount, GUILayout.Width(S.Px(80)))) ItemCheat.Add(entry.Item, amount);
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+            }
+            if (shown == 0) GUILayout.Label("沒有符合的雜物（請先載入存檔）。", S.Desc);
+        }
+
+        private static bool Matches((ItemData Item, string Name) entry, string filter)
+            => entry.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
+               || (entry.Item.Id ?? string.Empty).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
+
+        /// <summary>名稱查語系表較貴，快取起來；按「重新整理」時重建。</summary>
+        private static void EnsureItemCache()
+        {
+            if (itemCache.Count > 0) return;
+            if (ItemCheat.Instance == null) return;
+            foreach (var item in ItemCheat.MiscItems())
+                itemCache.Add((item, ItemCheat.Name(item)));
         }
 
         private static void DrawSystem()
@@ -314,6 +408,9 @@ namespace LegendOfMortal_InternalMod.UI
             return int.TryParse(statIn, out var v) ? v : 100;
         }
 
+        private static string StatLabel(GameStatType t)
+            => t == GameStatType.心理衛生 ? "心相" : t.ToString();
+
         /// <summary>兩欄：名稱　目前值　[設為 N]</summary>
         private static void StatGrid(GameStatType[] stats, int target)
         {
@@ -325,7 +422,7 @@ namespace LegendOfMortal_InternalMod.UI
                     if (j < stats.Length)
                     {
                         var t = stats[j];
-                        GUILayout.Label(t.ToString(), S.Row, GUILayout.Width(S.Px(110)));
+                        GUILayout.Label(StatLabel(t), S.Row, GUILayout.Width(S.Px(110)));
                         GUILayout.Label(CheatEngine.GetStat(t).ToString(), S.RowEntry, GUILayout.Width(S.Px(80)));
                         if (GUILayout.Button($"設為 {target}", GUILayout.Width(S.Px(130)))) CheatEngine.SetStat(t, target);
                     }
@@ -335,6 +432,61 @@ namespace LegendOfMortal_InternalMod.UI
                 GUILayout.EndHorizontal();
                 GUILayout.Space(S.Px(4));
             }
+        }
+
+        /// <summary>
+        /// 分級數值（心相：憂鬱／平靜／快樂；陰陽內功：老陰～老陽）由數值落在哪一段決定
+        /// （GameStatUtils.GetGameStatLevel），這裡直接切換狀態：
+        /// 前幾段取該段中段值，最高段直接設為上限，方便通過門檻。
+        /// </summary>
+        private static void StatStateRow(GameStatType type, string label)
+        {
+            GameStat stat = null;
+            try { stat = PlayerStatManagerData.Instance?.Stats?.Get(type); } catch { }
+            if (stat == null) return;
+            int levels = stat.LevelLength;
+            if (levels <= 1) return;
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, S.Row, GUILayout.Width(S.Px(110)));
+            int current = Mathf.Clamp(GameStatUtils.GetGameStatLevel(stat.FinalValue, stat.Max, levels), 0, levels - 1);
+            GUILayout.Label($"目前：{StatLevelLabel(stat, current)}", S.RowDesc);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            // 按鈕另起一行：陰陽內功有 5 段，和標籤放同一行會把視窗撐寬
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(S.Px(110));
+            for (int i = 0; i < levels; i++)
+            {
+                int level = i;
+                if (GUILayout.Button(StatLevelLabel(stat, level), GUILayout.Width(S.Px(90)))) SetStatLevel(type, stat, level);
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
+
+        private static string StatLevelLabel(GameStat stat, int level)
+        {
+            string raw = null;
+            try { raw = stat.LevelText[level]; } catch { }
+            if (string.IsNullOrEmpty(raw)) return level.ToString();
+            string key = "StatLevel/" + raw;
+            try
+            {
+                string text = LocalizationManager.Instance?.LocaleResolver.GetString(key);
+                if (!string.IsNullOrEmpty(text) && text != key) return text;
+            }
+            catch { }
+            return raw;
+        }
+
+        private static void SetStatLevel(GameStatType type, GameStat stat, int level)
+        {
+            int levels = stat.LevelLength;
+            int band = Mathf.Max(1, stat.Max / levels);
+            int value = level >= levels - 1 ? stat.Max : level * band + band / 2;
+            CheatEngine.SetStat(type, value);
         }
 
         private static void EntryCard(string key, string desc, string button, Action onClick)
@@ -351,7 +503,7 @@ namespace LegendOfMortal_InternalMod.UI
         }
 
         /// <summary>RichText 的亮色是給遊戲深色底用的，在紙底上換成同色系的深色。</summary>
-        private static string OnPaper(string s) => s
+        internal static string OnPaper(string s) => s
             .Replace("#FFD700", "#8A5A00").Replace("#7CFC00", "#2E7D32")
             .Replace("#FF6B6B", "#B3261E").Replace("#AAAAAA", "#7A6E62");
     }

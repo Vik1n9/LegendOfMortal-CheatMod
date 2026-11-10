@@ -19,3 +19,11 @@ Thumbs.db
 
 # 發行包輸出
 dist/
+tools/guide-verify/bin/
+tools/guide-verify/obj/
+
+# Python 工具暫存
+tools/game-extract/__pycache__/
+tools/game-extract/.venv/
+# 抽出的遊戲資料（版權），不可提交
+tools/game-extract/out/

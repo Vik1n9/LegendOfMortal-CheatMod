@@ -24,6 +24,13 @@ namespace LegendOfMortal_InternalMod.Core
             return $"第{Nums[y]}年{Nums[rem / 3 + 1]}月{Stages[rem % 3]}";
         }
 
+        /// <summary>地圖節點用的短格式：「二年八月中旬」。</summary>
+        public static string FormatRoundShort(int r)
+        {
+            int y = (r - 1) / 36 + 1, rem = (r - 1) % 36;
+            return $"{Nums[y]}年{Nums[rem / 3 + 1]}月{Stages[rem % 3]}";
+        }
+
         // ---- 遊戲資料讀取 ----
         private static readonly Dictionary<string, FlagData> flagCache = new();
 
@@ -94,14 +101,10 @@ namespace LegendOfMortal_InternalMod.Core
                 else continue;
 
                 var item = new GuideItem { Event = ev };
-                foreach (var r in ev.Reqs)
-                {
-                    bool? ok;
-                    string text;
-                    try { ok = r.Check(); text = r.Describe(); }
-                    catch (Exception ex) { ok = null; text = r.Label + "（讀取失敗）"; LegendOfMortal_InternalMod.Plugin.LogError("EventGuide: " + ex.Message); }
-                    (ok == null ? item.Notes : ok.Value ? item.Met : item.Missing).Add(text);
-                }
+                var res = GuideMap.Classify(ev.Reqs);
+                item.Missing.AddRange(res.Missing);
+                item.Met.AddRange(res.Met);
+                item.Notes.AddRange(res.Notes);
                 if (state == GuideState.Ready && item.Missing.Count > 0) state = GuideState.Lacking;
                 item.State = state;
                 list.Add(item);

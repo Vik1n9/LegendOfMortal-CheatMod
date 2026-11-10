@@ -21,3 +21,7 @@ Thumbs.db
 dist/
 tools/guide-verify/bin/
 tools/guide-verify/obj/
+
+# Python 工具暫存
+tools/game-extract/__pycache__/
+tools/game-extract/.venv/

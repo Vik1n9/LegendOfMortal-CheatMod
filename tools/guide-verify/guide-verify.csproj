@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="Stubs.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="GameData.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/Core/EventGuide.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/Core/EventGuideData.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/Core/GuideMap.cs" />

@@ -95,6 +95,14 @@ Linux / Steam Deck 請一併清空啟動選項。
   如果進遊戲後沒有看到載入提示，請查看 BepInEx\LogOutput.log。
 
 
+■ 特別感謝
+----------------------------------------
+・活俠傳 wiki：https://smilin.net/LoM-wiki/
+  （GitHub：https://github.com/Mr-Smilin/LoM-wiki）
+  事件攻略的路線、分歧條件、結局圖鑑，以及事件任務的養成事件名稱，
+  都依 wiki 整理。感謝所有編輯與貢獻者。
+
+
 ■ 第三方元件
 ----------------------------------------
 ・BepInEx（LGPL-2.1）：https://github.com/BepInEx/BepInEx

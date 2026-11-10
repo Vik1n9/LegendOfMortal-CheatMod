@@ -70,10 +70,12 @@ namespace LegendOfMortal_InternalMod.UI
                 return new Rect(area.x + laneW * n.Lane + S.Px(LaneGap) / 2f, y, laneW - S.Px(LaneGap), S.Px(NodeH));
             }
 
+            float BandTop(int s) => area.y + S.Px(BandH) * s + S.Px(Pitch) * secs[s].Row;
+
             bool repaint = Event.current.type == EventType.Repaint;
             if (repaint)
             {
-                DrawEdges(nodes, NodeRect, now, routes);
+                DrawEdges(nodes, NodeRect, BandTop, now, routes);
                 for (int s = 0; s < secs.Length; s++) DrawBand(secs[s], s, area, laneW);
             }
 
@@ -111,7 +113,7 @@ namespace LegendOfMortal_InternalMod.UI
                     GUI.Label(new Rect(area.x + laneW * i, r.y + S.Px(30), laneW, S.Px(22)), sec.Lanes[i], bandLane);
         }
 
-        private static void DrawEdges(MapNode[] nodes, Func<MapNode, Rect> rectOf, int now, Route routes)
+        private static void DrawEdges(MapNode[] nodes, Func<MapNode, Rect> rectOf, Func<int, float> bandTop, int now, Route routes)
         {
             foreach (var from in nodes)
             {
@@ -127,15 +129,18 @@ namespace LegendOfMortal_InternalMod.UI
                     bool off = (to.Route & routes) == 0 || (from.Route & routes) == 0;
                     Color c = onTaken ? S.Vermilion : touch ? S.Ink : new Color(S.Frame.r, S.Frame.g, S.Frame.b, off ? 0.22f : 0.6f);
                     float w = onTaken || touch ? S.Px(3) : S.Px(2);
-                    DrawEdge(fr, tr, c, w);
+                    // 跨到下一段時在段落標題上方匯流，標題底下只留一支箭頭，不在標題線下擠成一團
+                    int ts = SectionOf(to);
+                    float? merge = ts != SectionOf(from) ? bandTop(ts) - S.Px(8) : (float?)null;
+                    DrawEdge(fr, tr, c, w, merge);
                 }
             }
         }
 
-        private static void DrawEdge(Rect a, Rect b, Color c, float w)
+        private static void DrawEdge(Rect a, Rect b, Color c, float w, float? merge = null)
         {
             float x1 = a.center.x, y1 = a.yMax, x2 = b.center.x, y2 = b.y;
-            float ym = y2 - S.Px(14);
+            float ym = merge ?? y2 - S.Px(14);
             Fill(new Rect(x1 - w / 2, y1, w, Mathf.Max(0, ym - y1)), c);
             if (Mathf.Abs(x2 - x1) > 0.5f) Fill(new Rect(Mathf.Min(x1, x2) - w / 2, ym - w / 2, Mathf.Abs(x2 - x1) + w, w), c);
             Fill(new Rect(x2 - w / 2, ym, w, Mathf.Max(0, y2 - ym - S.Px(5))), c);
@@ -157,12 +162,30 @@ namespace LegendOfMortal_InternalMod.UI
             Fill(new Rect(r.x + bw, r.y + bw, r.width - bw * 2, r.height - bw * 2), new Color(fill.r, fill.g, fill.b, alpha));
 
             string sub = SubText(n);
+            // 標題與日期區間（例：一年四月下旬～九月上旬）比格子寬時縮小字級，避免折行後被裁掉
+            int titleSize = FitSize(n.Title, r.width, S.Px(15), S.Px(11));
+            int subSize = FitSize(sub, r.width, S.Px(12), S.Px(9));
             var old = GUI.color;
             GUI.color = new Color(1, 1, 1, alpha);
             GUI.Label(new Rect(r.x + S.Px(4), r.y, r.width - S.Px(8), r.height),
-                      $"<b>{n.Title}</b>\n<size={S.Px(12)}><color=#6B5D50>{sub}</color></size>", labelStyle);
+                      $"<size={titleSize}><b>{n.Title}</b></size>\n<size={subSize}><color=#6B5D50>{sub}</color></size>", labelStyle);
             GUI.color = old;
-            if (isCurrent) GUI.Label(new Rect(r.xMax - S.Px(64), r.y - S.Px(1), S.Px(64), S.Px(18)), st == NodeState.Current ? "<color=#A8322A><b>◀目前</b></color>" : "<color=#A8322A><b>◀下一步</b></color>", arrowStyle);
+            if (isCurrent)
+            {
+                // 標籤掛在外框右上角上方，不壓到節點標題
+                string tag = st == NodeState.Current ? "目前" : "下一步";
+                float tw = S.Px(14) * tag.Length + S.Px(10), th = S.Px(16);
+                var tr = new Rect(r.xMax - tw, r.y - th + S.Px(1), tw, th);
+                Fill(tr, S.Vermilion);
+                GUI.Label(tr, "<b>" + tag + "</b>", arrowStyle);
+            }
+        }
+
+        /// <summary>全形字約一字一個字級寬：放不下就縮小，但不小於 min。</summary>
+        private static int FitSize(string text, float width, int size, int min)
+        {
+            int len = System.Text.RegularExpressions.Regex.Replace(text ?? "", "<[^>]+>", "").Length;
+            return len == 0 ? size : Mathf.Max(min, Mathf.Min(size, Mathf.FloorToInt((width - S.Px(10)) / len)));
         }
 
         private static string SubText(MapNode n)

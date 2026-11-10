@@ -63,6 +63,8 @@ namespace LegendOfMortal_InternalMod.Core
             string prefix = target.GetFieldValue<string>("_scriptPrefix");
             foreach (PositionEventData ev in ((CollectionData<PositionEventData>)target).List)
             {
+                // 遊戲資料裡同一事件可能被重複放入清單（例：Center_Work_F_02），只列一次
+                if (ev == null || list.Contains(ev)) continue;
                 prefixCache[ev] = prefix;
                 list.Add(ev);
             }
@@ -70,7 +72,14 @@ namespace LegendOfMortal_InternalMod.Core
         }
 
         private string GenerateEventKey(PositionEventData ev)
-            => dataCache.FirstOrDefault(p => p.Value.Contains(ev)).Key + "事件：" + DataHelper.GetEventName(ev);
+        {
+            string pos = dataCache.FirstOrDefault(p => p.Value.Contains(ev)).Key ?? "";
+            string place = TrainingNames.Places.TryGetValue(pos, out var p) ? p : pos;
+            string result = null;
+            try { result = ev.ResultType; } catch { }   // _config 未設定時 ResultType 會丟例外
+            string name = result != null && TrainingNames.Events.TryGetValue(pos + "/" + result, out var n) ? RichText.Golden(n) : DataHelper.GetEventName(ev);
+            return place + "：" + name;
+        }
 
         private string GenerateStaticDesc(PositionEventData ev)
         {
@@ -82,8 +91,8 @@ namespace LegendOfMortal_InternalMod.Core
             var all = LuaParser.Instance.ExtractActionsFromLua(lua);
             var must = all.Where(a => !a.IsConditional).ToList();
             var cond = all.Where(a => a.IsConditional).ToList();
-            sb.AppendLine("    一定觸發：" + LuaParser.Description(must));
-            sb.AppendLine("    條件觸發：" + LuaParser.Description(cond));
+            sb.AppendLine("    一定觸發：" + (must.Count > 0 ? LuaParser.Description(must) : "無"));
+            if (cond.Count > 0) sb.AppendLine("    條件觸發：" + LuaParser.Description(cond));
             return sb.ToString();
         }
 
@@ -91,15 +100,15 @@ namespace LegendOfMortal_InternalMod.Core
         {
             var sb = new StringBuilder();
             int def = ev.GetFieldValue<int>("_defaultRate");
-            sb.AppendLine($"機率：{ev.GetRate()}({def})");
+            sb.AppendLine($"機率：{ev.GetRate()}（預設 {def}）");
             bool tog = ev.GetFieldValue<bool>("_toggleCondition");
             var cond = ev.GetFieldValue<ConditionResultItem>("_activeCondition");
             if (tog && cond != null)
                 sb.AppendLine("啟用條件：" + DataHelper.ExtractConditions(cond, out _));
-            sb.AppendLine("判定條件：");
             var rates = ev.GetFieldValue<PositionEventRateItem[]>("_eventRateItem");
-            if (rates != null)
+            if (rates != null && rates.Length > 0)
             {
+                sb.AppendLine("機率加成：");
                 foreach (var r in rates)
                 {
                     string t = DataHelper.ExtractConditions(r.Condition, out _);

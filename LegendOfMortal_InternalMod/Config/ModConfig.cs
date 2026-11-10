@@ -20,8 +20,10 @@ namespace LegendOfMortal_InternalMod.Config
         public static ConfigEntry<bool> InfAction;
         public static ConfigEntry<bool> InfPractice;
         public static ConfigEntry<bool> FastPractice;
-        public static ConfigEntry<bool> InfForgeAlchemy;
-        public static ConfigEntry<bool> FastForgeAlchemy;
+        public static ConfigEntry<bool> InfAlchemy;
+        public static ConfigEntry<bool> FastAlchemy;
+        public static ConfigEntry<bool> InfForge;
+        public static ConfigEntry<bool> FastForge;
         public static ConfigEntry<bool> MaxFriendship;
         public static ConfigEntry<float> GameSpeed;
 
@@ -39,12 +41,26 @@ namespace LegendOfMortal_InternalMod.Config
             GodCombat = cfg.Bind("戰鬥", "單挑無敵秒殺", false, "單挑時我方不受傷害");
             GodBattle = cfg.Bind("戰鬥", "群戰無敵秒殺", false, "群戰時我方不受傷害");
             InfAction = cfg.Bind("養成", "無限行動點", false, "行動點用完自動回滿");
-            InfPractice = cfg.Bind("養成", "練功免消耗", false, "練功時不扣除消耗");
-            FastPractice = cfg.Bind("養成", "快速練功", false, "每次練功直接升一級");
-            InfForgeAlchemy = cfg.Bind("養成", "鍛造煉丹免消耗", false, "預留，尚未實作");
-            FastForgeAlchemy = cfg.Bind("養成", "快速鍛造煉丹", false, "預留，尚未實作");
-            MaxFriendship = cfg.Bind("養成", "好感只升不降", false, "好感只升不降（含虞小梅、郁竹結緣線）");
+            InfPractice = cfg.Bind("養成", "練功免消耗", false, "練功（武學）時不扣除消耗");
+            FastPractice = cfg.Bind("養成", "快速練功", false, "每次練功（武學）直接升一級");
+            RemoveLegacy(cfg, "養成", "鍛造煉丹免消耗");
+            RemoveLegacy(cfg, "養成", "快速鍛造煉丹");
+            InfAlchemy = cfg.Bind("養成", "煉丹免消耗", false, "煉丹升級時不扣毒藥點數、銀兩與次數");
+            FastAlchemy = cfg.Bind("養成", "快速煉丹", false, "煉丹每次升級直接升一級（不扣點數）");
+            InfForge = cfg.Bind("養成", "鍛造免消耗", false, "鍛造升級時不扣鍛造點數、銀兩與次數");
+            FastForge = cfg.Bind("養成", "快速鍛造", false, "鍛造每次升級直接升一級（不扣點數）");
+            MaxFriendship = cfg.Bind("養成", "好感只升不降", false, "好感只升不降");
             GameSpeed = cfg.Bind("系統", "遊戲速度", 1f, "1=正常，範圍 0.5-5");
+        }
+
+        /// <summary>移除舊版設定 key（例如已拆分的「鍛造煉丹免消耗」），避免設定檔殘留。</summary>
+        private static void RemoveLegacy(ConfigFile cfg, string section, string key)
+        {
+            try
+            {
+                if (cfg.TryGetEntry<bool>(section, key, out _)) cfg.Remove(new ConfigDefinition(section, key));
+            }
+            catch { }
         }
     }
 }

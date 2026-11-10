@@ -33,6 +33,7 @@ namespace LegendOfMortal_InternalMod
             Patch(typeof(Patches.BattleCheatPatch), ModConfig.EnableCheats.Value, "戰鬥作弊");
             Patch(typeof(Patches.UpkeepCheatPatch), ModConfig.EnableCheats.Value, "養成作弊");
             Patch(typeof(Patches.PracticeCheatPatch), ModConfig.EnableCheats.Value, "練功作弊");
+            Patch(typeof(Patches.ForgeAlchemyCheatPatch), ModConfig.EnableCheats.Value, "煉丹／鍛造升級作弊");
             Patch(typeof(Patches.FriendshipCheatPatch), ModConfig.EnableCheats.Value, "好感作弊");
             Patch(typeof(Patches.CombatSinglePatch), ModConfig.EnableCheats.Value, "單挑作弊");
             LogInfo("內置MOD v1.2beta 載入成功（適配 v1.0.6001.0 崆峒神威）");

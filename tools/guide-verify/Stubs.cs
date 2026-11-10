@@ -44,7 +44,8 @@ namespace UnityEngine
     public enum EventType { Layout, Repaint, MouseDown }
     public class Event { public static Event current = new(); public EventType type; }
     public class Texture2D { public static Texture2D whiteTexture = new(); }
-    public static class Mathf { public static float Max(float a, float b) => Math.Max(a, b); public static float Min(float a, float b) => Math.Min(a, b); public static float Abs(float a) => Math.Abs(a); }
+    public static class Mathf { public static float Max(float a, float b) => Math.Max(a, b); public static float Min(float a, float b) => Math.Min(a, b); public static float Abs(float a) => Math.Abs(a);
+        public static int Max(int a, int b) => Math.Max(a, b); public static int Min(int a, int b) => Math.Min(a, b); public static int FloorToInt(float f) => (int)Math.Floor(f); }
     public static class GUI { public static Color color; public static GUISkin skin = new();
         public static void DrawTexture(Rect r, Texture2D t) { }
         public static void Label(Rect r, string s, GUIStyle st) { }

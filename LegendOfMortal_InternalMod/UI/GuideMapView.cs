@@ -20,6 +20,9 @@ namespace LegendOfMortal_InternalMod.UI
         private static string selected;      // 節點 Id 或 "E<編號>"
         private static string pending;       // 點擊後在下一個 Layout 才套用，避免同一事件內版面不一致
         private static bool locate = true;   // 要求把捲動位置移到目前節點
+        private static int sheetIndex;       // 目前顯示的分頁（GuideMapData.Sheets 的索引）
+        private static int pendingSheet = -1;
+        private static readonly Dictionary<MapSheet, string> lastSelected = new();
         private static bool endingAll;
         private static GUISkin stylesFor;
         private static GUIStyle labelStyle, bandTitle, bandLane, arrowStyle;
@@ -37,10 +40,18 @@ namespace LegendOfMortal_InternalMod.UI
         public static void DrawMap(int now, Route routes)
         {
             EnsureStyles();
-            if (Event.current.type == EventType.Layout && pending != null) { selected = pending; pending = null; }
-            var current = GuideMap.FindCurrent(now, routes);
-            if (selected == null) selected = current?.Id ?? "葉氏兄妹";
+            var sheets = GuideMapData.Sheets;
+            if (Event.current.type == EventType.Layout) ApplyPending(sheets);
+            var sheet = sheets[sheetIndex];
 
+            int pick = GUILayout.Toolbar(sheetIndex, sheets.Select(s => s.Tab).ToArray(), S.Tab);
+            if (pick != sheetIndex) pendingSheet = pick;
+
+            var current = GuideMap.FindCurrent(sheet, now, routes);
+            if (selected == null) selected = current?.Id ?? sheet.Nodes[0].Id;
+
+            GUILayout.Label(sheet.Intro, S.Desc);
+            if (sheet.Lover >= 0) BondLine(sheet);
             GUILayout.Label("點選地圖上的方塊查看分歧、路線與條件。" +
                             "金黃底＝分歧點，紅底＝結局群組，朱紅外框＝你現在的位置（或下一步），淡色＝不在你目前的路線上。", S.Desc);
             GUILayout.BeginHorizontal();
@@ -51,13 +62,50 @@ namespace LegendOfMortal_InternalMod.UI
 
             DrawDetail(now, routes);
             GUILayout.Space(S.Px(8));
-            DrawCanvas(now, routes, current);
+            DrawCanvas(sheet, now, routes, current);
         }
 
-        private static void DrawCanvas(int now, Route routes, MapNode current)
+        /// <summary>套用上一輪的點擊：切換分頁、或選取節點（節點在別的分頁時一併切過去）。</summary>
+        private static void ApplyPending(MapSheet[] sheets)
         {
-            var nodes = GuideMapData.Nodes;
-            var secs = GuideMapData.Sections;
+            if (pendingSheet >= 0 && pendingSheet != sheetIndex)
+            {
+                lastSelected[sheets[sheetIndex]] = selected;
+                sheetIndex = pendingSheet;
+                lastSelected.TryGetValue(sheets[sheetIndex], out selected);
+                locate = selected == null;
+            }
+            pendingSheet = -1;
+            if (pending == null) return;
+            if (GuideMap.Get(pending) is { } n && GuideMap.SheetOf(n) is { } owner && owner != sheets[sheetIndex])
+            {
+                lastSelected[sheets[sheetIndex]] = selected;
+                sheetIndex = Array.IndexOf(sheets, owner);
+            }
+            selected = pending;
+            pending = null;
+        }
+
+        private static void BondLine(MapSheet sheet)
+        {
+            string lover = LoverReq.NameOf(LoverReq.Current);
+            bool isLover = LoverReq.Current == sheet.Lover;
+            string bond;
+            if (sheet.Bond == null) bond = RichText.Gray("目前版本無法結緣");
+            else
+            {
+                bool? ok;
+                try { ok = sheet.Bond.Check(); } catch { ok = null; }
+                bond = ok == true ? RichText.Green("已結緣") : ok == false ? RichText.Red("尚未結緣") : RichText.Gray("無法判定");
+            }
+            string heart = isLover ? RichText.Green("心上人：" + lover) : RichText.Red("心上人：" + lover + "（不是" + LoverReq.Names[sheet.Lover] + "）");
+            GUILayout.Label(OnPaper($"{sheet.Title}　·　{bond}　·　{heart}"), S.Desc);
+        }
+
+        private static void DrawCanvas(MapSheet sheet, int now, Route routes, MapNode current)
+        {
+            var nodes = sheet.Nodes;
+            var secs = sheet.Sections;
             int maxRow = nodes.Max(n => n.Row);
             float totalH = S.Px(BandH) * secs.Length + S.Px(Pitch) * (maxRow + 1);
             var area = GUILayoutUtility.GetRect(1, totalH, GUILayout.ExpandWidth(true));
@@ -65,7 +113,7 @@ namespace LegendOfMortal_InternalMod.UI
             float laneW = area.width / Lanes;
             Rect NodeRect(MapNode n)
             {
-                int s = SectionOf(n);
+                int s = SectionOf(secs, n);
                 float y = area.y + S.Px(BandH) * (s + 1) + S.Px(Pitch) * n.Row + (S.Px(Pitch) - S.Px(NodeH)) / 2f;
                 return new Rect(area.x + laneW * n.Lane + S.Px(LaneGap) / 2f, y, laneW - S.Px(LaneGap), S.Px(NodeH));
             }
@@ -75,7 +123,7 @@ namespace LegendOfMortal_InternalMod.UI
             bool repaint = Event.current.type == EventType.Repaint;
             if (repaint)
             {
-                DrawEdges(nodes, NodeRect, BandTop, now, routes);
+                DrawEdges(secs, nodes, NodeRect, BandTop, now, routes);
                 for (int s = 0; s < secs.Length; s++) DrawBand(secs[s], s, area, laneW);
             }
 
@@ -93,9 +141,8 @@ namespace LegendOfMortal_InternalMod.UI
             }
         }
 
-        private static int SectionOf(MapNode n)
+        private static int SectionOf(MapSection[] secs, MapNode n)
         {
-            var secs = GuideMapData.Sections;
             int s = 0;
             for (int i = 0; i < secs.Length; i++) if (secs[i].Row <= n.Row) s = i;
             return s;
@@ -113,7 +160,7 @@ namespace LegendOfMortal_InternalMod.UI
                     GUI.Label(new Rect(area.x + laneW * i, r.y + S.Px(30), laneW, S.Px(22)), sec.Lanes[i], bandLane);
         }
 
-        private static void DrawEdges(MapNode[] nodes, Func<MapNode, Rect> rectOf, Func<int, float> bandTop, int now, Route routes)
+        private static void DrawEdges(MapSection[] secs, MapNode[] nodes, Func<MapNode, Rect> rectOf, Func<int, float> bandTop, int now, Route routes)
         {
             foreach (var from in nodes)
             {
@@ -122,7 +169,7 @@ namespace LegendOfMortal_InternalMod.UI
                 foreach (var tid in from.AllTargets.Distinct())
                 {
                     var to = GuideMap.Get(tid);
-                    if (to == null) continue;
+                    if (to == null || !nodes.Contains(to)) continue;
                     var tr = rectOf(to);
                     bool onTaken = taken != null && taken.To.Contains(tid);
                     bool touch = selected == from.Id || selected == to.Id;
@@ -130,8 +177,8 @@ namespace LegendOfMortal_InternalMod.UI
                     Color c = onTaken ? S.Vermilion : touch ? S.Ink : new Color(S.Frame.r, S.Frame.g, S.Frame.b, off ? 0.22f : 0.6f);
                     float w = onTaken || touch ? S.Px(3) : S.Px(2);
                     // 跨到下一段時在段落標題上方匯流，標題底下只留一支箭頭，不在標題線下擠成一團
-                    int ts = SectionOf(to);
-                    float? merge = ts != SectionOf(from) ? bandTop(ts) - S.Px(8) : (float?)null;
+                    int ts = SectionOf(secs, to);
+                    float? merge = ts != SectionOf(secs, from) ? bandTop(ts) - S.Px(8) : (float?)null;
                     DrawEdge(fr, tr, c, w, merge);
                 }
             }
@@ -241,14 +288,18 @@ namespace LegendOfMortal_InternalMod.UI
                 return;
             }
             foreach (var o in n.Options) OptionCard(o);
-            if (n.Next.Length > 0)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("接下來：", S.Row, GUILayout.Width(S.Px(90)));
-                foreach (var id in n.Next) TargetButton(id);
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
-            }
+            TargetRow("接下來：", n.Next);
+            TargetRow("相關：", n.See);
+        }
+
+        private static void TargetRow(string title, string[] ids)
+        {
+            if (ids.Length == 0) return;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(title, S.Row, GUILayout.Width(S.Px(90)));
+            foreach (var id in ids) TargetButton(id);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
         }
 
         private static void OptionCard(MapOption o)
@@ -289,7 +340,11 @@ namespace LegendOfMortal_InternalMod.UI
         private static string TargetLabel(string id)
         {
             if (GuideMap.IsEnding(id, out int no)) return "結局" + no + (GuideMap.GetEnding(no) is { } e ? " " + e.Name : "");
-            return GuideMap.Get(id)?.Title ?? id;
+            var n = GuideMap.Get(id);
+            if (n == null) return id;
+            // 連到別的分頁時標出分頁名稱
+            var owner = GuideMap.SheetOf(n);
+            return owner != null && owner != GuideMapData.Sheets[sheetIndex] ? owner.Tab + "：" + n.Title : n.Title;
         }
 
         private static float TargetWidth(string id) => S.Px(34 + 21 * TargetLabel(id).Length);

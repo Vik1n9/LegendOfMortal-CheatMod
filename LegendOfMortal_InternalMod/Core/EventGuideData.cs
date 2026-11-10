@@ -33,6 +33,7 @@ namespace LegendOfMortal_InternalMod.Core
         internal static Req NoFlag(string id, string label) => new FlagReq { Id = id, Label = label, Op = Op.Eq, Value = 0 };
         internal static Req Either(params Req[] items) => new AnyReq { Label = "任一", Items = items };
         internal static Req Note(string text) => new NoteReq { Label = text };
+        internal static Req Lover(int who) => new LoverReq { Who = who, Label = "心上人為" + LoverReq.Names[who] };
 
         // 常用旗標
         internal static Req 趙活在唐門 => NoFlag("E11000", "趙活在唐門");

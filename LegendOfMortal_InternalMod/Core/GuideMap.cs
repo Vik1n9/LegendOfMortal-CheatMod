@@ -36,6 +36,8 @@ namespace LegendOfMortal_InternalMod.Core
         public string[] Next = new string[0];
         /// <summary>結局群組節點：列出符合的結局。</summary>
         public Func<Ending, bool> EndingFilter;
+        /// <summary>其他地圖上的相關節點（例：結緣線節點對應的主線節點），只顯示成按鈕，不畫連線。</summary>
+        public string[] See = new string[0];
 
         public IEnumerable<string> AllTargets => Next.Concat(Options.SelectMany(o => o.To));
     }
@@ -46,6 +48,21 @@ namespace LegendOfMortal_InternalMod.Core
         public int Row;
         public string Title;
         public string[] Lanes;
+    }
+
+    /// <summary>
+    /// 一張路線地圖：主線，或某位角色的結緣線（含結緣後的分支事件）。
+    /// 節點 Id 在所有地圖間不可重複，去向只連到同一張地圖的節點或結局。
+    /// </summary>
+    public sealed class MapSheet
+    {
+        public string Tab, Title, Intro;
+        public MapSection[] Sections;
+        public MapNode[] Nodes;
+        /// <summary>結緣旗標（攻略Ｘ）；主線與無法結緣的角色為 null。</summary>
+        public Req Bond;
+        /// <summary>心上人編號（LoverReq.Names 的索引）；主線為 -1。</summary>
+        public int Lover = -1;
     }
 
     public sealed class Ending
@@ -77,12 +94,19 @@ namespace LegendOfMortal_InternalMod.Core
     public static class GuideMap
     {
         private static Dictionary<string, MapNode> byId;
+        private static Dictionary<MapNode, MapSheet> sheetOf;
         private static Dictionary<int, Ending> endingByNo;
 
         public static MapNode Get(string id)
         {
-            byId ??= GuideMapData.Nodes.ToDictionary(n => n.Id);
+            byId ??= GuideMapData.Sheets.SelectMany(s => s.Nodes).ToDictionary(n => n.Id);
             return id != null && byId.TryGetValue(id, out var n) ? n : null;
+        }
+
+        public static MapSheet SheetOf(MapNode n)
+        {
+            sheetOf ??= GuideMapData.Sheets.SelectMany(s => s.Nodes.Select(x => (x, s))).ToDictionary(p => p.x, p => p.s);
+            return n != null && sheetOf.TryGetValue(n, out var s) ? s : null;
         }
 
         public static Ending GetEnding(int no)
@@ -148,10 +172,12 @@ namespace LegendOfMortal_InternalMod.Core
         /// 目前玩家「正在」或「下一個要面對」的節點：在自己路線上、尚未結束、開始最早的那個。
         /// 同一旬有多個時取地圖上排最前面的。
         /// </summary>
-        public static MapNode FindCurrent(int now, Route routes)
+        public static MapNode FindCurrent(int now, Route routes) => FindCurrent(GuideMapData.Main, now, routes);
+
+        public static MapNode FindCurrent(MapSheet sheet, int now, Route routes)
         {
             MapNode best = null;
-            foreach (var n in GuideMapData.Nodes)
+            foreach (var n in sheet.Nodes)
             {
                 if (n.Kind == NodeKind.EndingGroup || (n.Route & routes) == 0 || now > n.End) continue;
                 if (best == null || n.Start < best.Start || (n.Start == best.Start && n.Row < best.Row)) best = n;

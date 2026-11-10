@@ -184,7 +184,7 @@ namespace GuideVerify
 
         private static IEnumerable<(FlagReq Req, string Owner)> GuideFlags()
         {
-            foreach (var n in GuideMapData.Nodes)
+            foreach (var n in GuideMapData.Sheets.SelectMany(sh => sh.Nodes))
             {
                 foreach (var r in FlagReqs(n.Reqs)) yield return (r, n.Id);
                 foreach (var o in n.Options)
@@ -304,7 +304,7 @@ namespace GuideVerify
         private static void CheckEndingTargets()
         {
             int n = 0;
-            foreach (var node in GuideMapData.Nodes)
+            foreach (var node in GuideMapData.Sheets.SelectMany(sh => sh.Nodes))
                 foreach (var o in node.Options)
                     foreach (var t in o.To)
                         if (GuideMap.IsEnding(t, out int no))

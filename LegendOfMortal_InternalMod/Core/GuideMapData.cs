@@ -1,3 +1,4 @@
+using System.Linq;
 using static LegendOfMortal_InternalMod.Core.Route;
 using static LegendOfMortal_InternalMod.Core.EventGuideData;
 using R = Mortal.Core.RelationshipStatType;
@@ -10,8 +11,9 @@ namespace LegendOfMortal_InternalMod.Core
     /// 來源：〈主支線簡易表格〉各事件頁、〈眾人的決策〉、〈汗青書〉（結局）等。
     /// 規則：wiki 有寫明的數值才寫成可判定條件；wiki 沒寫清楚的一律寫成備註（灰字），不猜測。
     /// 地圖座標：Lane 0~4 對應 Sections 內該段的欄位名稱，Row 為由上而下的列號。
+    /// 各角色的結緣線地圖見 GuideRomanceData.cs。
     /// </summary>
-    public static class GuideMapData
+    public static partial class GuideMapData
     {
         private static int T(int y, int m, int s) => EventGuide.Round(y, m, s);
         private const int Forever = int.MaxValue;
@@ -21,6 +23,18 @@ namespace LegendOfMortal_InternalMod.Core
 
         private static MapOption O(string label, string result, string[] to = null, Req[] reqs = null, Req taken = null)
             => new MapOption { Label = label, Result = result, To = to ?? new string[0], Reqs = reqs ?? new Req[0], Taken = taken };
+
+        private static MapSheet main;
+        public static MapSheet Main => main ??= new MapSheet
+        {
+            Tab = "主線", Title = "主線路線",
+            Intro = "第一年到第四年的主要分歧、路線與結局。各角色的結緣與支線事件請切換上方的角色分頁。",
+            Sections = Sections, Nodes = Nodes,
+        };
+
+        private static MapSheet[] sheets;
+        /// <summary>路線地圖的所有分頁：主線在最前，其後為各角色結緣線。</summary>
+        public static MapSheet[] Sheets => sheets ??= new[] { Main }.Concat(Romances).ToArray();
 
         public static readonly MapSection[] Sections =
         {

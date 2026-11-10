@@ -208,4 +208,16 @@ namespace LegendOfMortal_InternalMod.Core
         public override bool? Check() => null;
         public override string Describe() => Label;
     }
+
+    /// <summary>心上人（遊戲數值「愛人」）：劇本以 SetPlayer("lover", n) 設定，n 對應 Names 的索引。</summary>
+    public sealed class LoverReq : Req
+    {
+        public static readonly string[] Names = { "唐默鈴", "瑞杏", "葉雲裳", "虞小梅", "上官螢", "夏侯蘭", "郁竹", "魏菊", "龍湘" };
+        public int Who;
+
+        public static int Current => EventGuide.Stat(GameStatType.愛人);
+        public static string NameOf(int v) => v >= 0 && v < Names.Length ? Names[v] : "無";
+        public override bool? Check() => Current == Who;
+        public override string Describe() => $"{Label}（目前：{NameOf(Current)}）";
+    }
 }

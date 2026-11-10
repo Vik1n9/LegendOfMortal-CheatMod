@@ -16,6 +16,7 @@
     <Compile Include="../../LegendOfMortal_InternalMod/Core/EventGuideData.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/Core/GuideMap.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/Core/GuideMapData.cs" />
+    <Compile Include="../../LegendOfMortal_InternalMod/Core/GuideRomanceData.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/Core/GuideEndings.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/Core/RichText.cs" />
     <Compile Include="../../LegendOfMortal_InternalMod/UI/GuideMapView.cs" />

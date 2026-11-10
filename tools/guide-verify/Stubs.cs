@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 namespace Mortal.Core
 {
-    public enum GameStatType { 心理衛生, 修養, 性情, 處世, 道德, 學問, 門派名聲, 門派規模, 個人貢獻度, 行動次數, 變心, 銀兩, 命運, 體力, 內力, 輕功, 魅力, 嘴力, 門派資產, 門派人數, 向心力 }
-    public enum RelationshipStatType { 四師兄, 虞小梅, 瑞笙, 南宮淺, 郁竹, 申屠龍, 葉雲裳, 葉雲舟, 夏侯蘭, 龍湘 }
+    public enum GameStatType { 心理衛生, 修養, 性情, 處世, 道德, 學問, 門派名聲, 門派規模, 個人貢獻度, 行動次數, 變心, 銀兩, 命運, 體力, 內力, 輕功, 魅力, 嘴力, 門派資產, 門派人數, 向心力, 愛人 }
+    public enum RelationshipStatType { 四師兄, 虞小梅, 瑞笙, 南宮淺, 郁竹, 申屠龍, 葉雲裳, 葉雲舟, 夏侯蘭, 龍湘, 小師妹, 三師兄, 上官螢, 魏菊, 瑞杏, 孟仙謠, 福韞, 李富貴 }
     public class FlagData { public int State; }
     public class StatItem { public int FinalValue; public int Value; }
     public class StatSet { public static Dictionary<GameStatType,int> V = new(); public StatItem Get(GameStatType t) => new StatItem { FinalValue = V.TryGetValue(t, out var x) ? x : 0 }; }
@@ -20,7 +20,7 @@ namespace LegendOfMortal_InternalMod.UI
     {
         public static Color Paper, PaperDark, Ink, InkSoft, Vermilion, Frame;
         public static GUISkin Skin = new GUISkin();
-        public static GUIStyle Label = new(), Desc = new(), Entry = new(), Row = new(), RowDesc = new();
+        public static GUIStyle Label = new(), Desc = new(), Entry = new(), Row = new(), RowDesc = new(), Tab = new();
         public static int Px(float v) => (int)v;
     }
 }
@@ -58,6 +58,7 @@ namespace UnityEngine
         public static void FlexibleSpace() { } public static void Space(float f) { }
         public static GUILayoutOption Width(float w) => null; public static GUILayoutOption ExpandWidth(bool b) => null;
         public static int Toolbar(int i, string[] s, params GUILayoutOption[] o) => i;
+        public static int Toolbar(int i, string[] s, GUIStyle st, params GUILayoutOption[] o) => i;
         public static Rect GetRectDummy() => default; }
     public static class GUILayoutUtility { public static Rect GetRect(float w, float h, params GUILayoutOption[] o) => new Rect(0, 0, 740, h); }
 }

@@ -21,7 +21,7 @@ python3 -m venv .venv
   -o tools/game-extract/out
 ```
 
-預設輸出到本目錄的 `out/`。`out/` 已隨 repo 提交，沒有遊戲的人也能跑 `tools/guide-verify`。
+預設輸出到本目錄的 `out/`。`out/` 是遊戲本體的資料（劇本、旗標備註、結局說明），**已列入 .gitignore，請勿提交或上傳**；repo 內只放遊戲玩家本來就看得到的事件／結局中文名稱。沒有遊戲的人仍可跑 `tools/guide-verify`，只是會略過「攻略 vs 遊戲本體」那一層。
 
 ## 產出
 
@@ -45,4 +45,4 @@ python3 -m venv .venv
 ## 注意
 
 - 這是唯讀工具，不會修改遊戲檔案。
-- 遊戲改版後重新跑一次，並把 `out/` 的變更一起提交；`tools/guide-verify` 會用新資料重新檢查攻略。
+- 遊戲改版後在本機重新跑一次，`tools/guide-verify` 會用新資料重新檢查攻略（`out/` 不提交）。

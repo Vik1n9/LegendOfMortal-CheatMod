@@ -51,6 +51,15 @@ class P {
     }
     // 各 now 不丟例外
     for (int r = 1; r <= 4*36; r++) { GuideMap.FindCurrent(r, EventGuide.PlayerRoutes(r)); EventGuide.Evaluate(r, true); }
+    // 遊戲本體抽出的資料（tools/game-extract/out）：有就比對，沒有就跳過
+    var dataDir = GuideVerify.GameData.FindDir();
+    if (dataDir != null && GuideVerify.GameData.Load(dataDir))
+    {
+      Console.WriteLine("-- 遊戲資料比對 --");
+      GuideVerify.GameData.Run();
+      fails += GuideVerify.GameData.Fails;
+    }
+    else Console.WriteLine("（找不到 tools/game-extract/out，跳過遊戲資料比對）");
     Console.WriteLine(fails == 0 ? "ALL OK" : fails + " failures");
   }
 }

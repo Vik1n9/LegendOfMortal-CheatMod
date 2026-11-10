@@ -297,7 +297,7 @@ namespace LegendOfMortal_InternalMod.UI
         private static void TargetButton(string id)
         {
             string label = TargetLabel(id);
-            if (GUILayout.Button("→ " + label, GUILayout.Width(TargetWidth(id)))) pending = id;
+            if (GUILayout.Button(label, GUILayout.Width(TargetWidth(id)))) pending = id;
         }
 
         private static void ReqLines(Req[] reqs, string title)

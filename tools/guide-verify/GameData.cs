@@ -16,16 +16,15 @@ namespace GuideVerify
     {
         public sealed class Flag
         {
-            public string Note;
             public int Default;
-            /// <summary>開發備註裡列出的值域，例如 "2: 崆峒" → { 2, "崆峒" }。</summary>
-            public readonly Dictionary<int, string> Values = new();
+            /// <summary>開發備註裡列出的值（只有數字），例如 "1:青城 2:崆峒" → { 1, 2 }。</summary>
+            public readonly HashSet<int> Values = new();
         }
 
         public sealed class Ending
         {
             public int No;
-            public string Title, Desc;
+            public string Title;
         }
 
         public sealed class Script
@@ -51,12 +50,11 @@ namespace GuideVerify
             public string Kind;   // flag / checkpoint / script
             public string Key;
             public int Value;
-            public string CondText;
             public string Text => Kind switch
             {
                 "flag" => $"{Key}={Value}",
                 "checkpoint" => $"{Key} 選項{Value}",
-                _ => CondText ?? "?"
+                _ => "劇本條件"
             };
         }
 
@@ -99,22 +97,14 @@ namespace GuideVerify
             using (var doc = JsonDocument.Parse(File.ReadAllText(flagsFile)))
                 foreach (var p in doc.RootElement.EnumerateObject())
                 {
-                    var f = new Flag { Note = p.Value.GetProperty("note").GetString(), Default = p.Value.GetProperty("default").GetInt32() };
-                    foreach (var line in (f.Note ?? "").Split('\n', '\r'))
-                    {
-                        var t = line.Trim();
-                        int i = t.IndexOfAny(new[] { ':', '.', '．' });
-                        if (i <= 0) continue;
-                        if (!int.TryParse(t.Substring(0, i).Trim(), out int v)) continue;
-                        var text = t.Substring(i + 1).Trim();
-                        if (text.Length > 0) f.Values[v] = text;
-                    }
+                    var f = new Flag { Default = p.Value.GetProperty("default").GetInt32() };
+                    foreach (var v in p.Value.GetProperty("values").EnumerateArray()) f.Values.Add(v.GetInt32());
                     Flags[p.Name] = f;
                 }
 
             using (var doc = JsonDocument.Parse(File.ReadAllText(endingsFile)))
                 foreach (var e in doc.RootElement.EnumerateArray())
-                    Endings.Add(new Ending { No = e.GetProperty("no").GetInt32(), Title = e.GetProperty("title").GetString(), Desc = e.GetProperty("desc").GetString() });
+                    Endings.Add(new Ending { No = e.GetProperty("no").GetInt32(), Title = e.GetProperty("title").GetString() });
 
             using (var doc = JsonDocument.Parse(File.ReadAllText(scriptsFile)))
                 foreach (var p in doc.RootElement.EnumerateObject())
@@ -137,7 +127,6 @@ namespace GuideVerify
                                 if (g.TryGetProperty("kind", out var kind)) guard.Kind = kind.GetString();
                                 if (g.TryGetProperty("key", out var key)) guard.Key = key.GetString();
                                 if (g.TryGetProperty("value", out var val)) guard.Value = val.GetInt32();
-                                if (g.TryGetProperty("text", out var txt)) guard.CondText = txt.GetString();
                                 eo.Guards.Add(guard);
                             }
                             s.Opens.Add(eo);
@@ -219,28 +208,12 @@ namespace GuideVerify
                     Fail($"{owner}: 旗標 {r.Id} 不在遊戲旗標表");
                     continue;
                 }
-                if (r.Op != Op.Eq || r.Value <= 0 || !f.Values.TryGetValue(r.Value, out var gameText)) continue;
-                if (!SameMeaning(gameText, r.Label))
-                    Warn($"{owner}: {r.Id}={r.Value} 遊戲寫「{gameText}」，攻略寫「{r.Label}」");
+                // 備註沒列值域的旗標無從比對；有列的話，攻略要求的值必須在裡面（或是預設值）
+                if (r.Op != Op.Eq || r.Value <= 0 || f.Values.Count == 0) continue;
+                if (!f.Values.Contains(r.Value) && f.Default != r.Value)
+                    Warn($"{owner}: {r.Id}={r.Value}（{r.Label}）不在遊戲值域 {string.Join("/", f.Values.OrderBy(v => v))}");
             }
             Console.WriteLine($"旗標：檢查 {n} 個引用（{Flags.Count} 個旗標可用）");
-        }
-
-        /// <summary>兩個中文標籤是否指同一件事：取 2 字詞交集，避免「已選崆峒留學」對「崆峒」誤判。</summary>
-        private static bool SameMeaning(string a, string b)
-        {
-            static HashSet<string> Grams(string s)
-            {
-                var set = new HashSet<string>();
-                for (int i = 0; i + 1 < s.Length; i++)
-                {
-                    char c1 = s[i], c2 = s[i + 1];
-                    if (c1 >= 0x3400 && c2 >= 0x3400 && c1 <= 0x9fff && c2 <= 0x9fff)
-                        set.Add(s.Substring(i, 2));
-                }
-                return set;
-            }
-            return Grams(a).Overlaps(Grams(b));
         }
 
         // ---- 結局 ----

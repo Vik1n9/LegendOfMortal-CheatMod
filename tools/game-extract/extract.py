@@ -10,11 +10,11 @@
     pip install UnityPy TypeTreeGeneratorAPI
     python tools/game-extract/extract.py "/path/to/LegendOfMortal" -o tools/game-extract/out
 
-產出：
-    out/flags.json     旗標編號 → 開發備註（值域說明）、預設值
-    out/missions.json  任務 → 檢查點（時間、地點、條件、成功/失敗時寫入的旗標）
-    out/endings.json   汗青書（LibraryItemData 20000~20065）
-    out/scripts.json   Lua 劇本 → 開啟的結局、寫入的旗標、下一個劇本
+產出（只留驗證需要的最低資料：名稱、編號、旗標值，不含劇本內文與說明文字）：
+    out/flags.json     旗標編號 → 預設值、開發備註列出的值（只留數字）
+    out/missions.json  任務名稱 → 檢查點編號、時間、起始劇本名稱
+    out/endings.json   汗青書編號與中文名稱（LibraryItemData 20000~20065）
+    out/scripts.json   劇本名稱 → 開啟的結局、寫入的旗標、互指的劇本名稱、結局開啟點的旗標條件
 """
 import argparse, json, os, re, sys
 from collections import defaultdict
@@ -35,10 +35,9 @@ def main():
         sys.exit(f"找不到 {assets}")
 
     env = UnityPy.load(assets)
-    # 先用「不套 typetree」的方式辨識 MonoBehaviour 的腳本類別與名稱，
+    # 先用「不套 typetree」的方式辨識 MonoBehaviour 的腳本類別，
     # 之後再掛上 TypeTreeGenerator 才能讀出自訂欄位。
     groups = defaultdict(list)
-    name_of = {}
     for o in env.objects:
         if o.type.name != "MonoBehaviour":
             continue
@@ -48,19 +47,10 @@ def main():
         except Exception:
             continue
         groups[cls].append(o)
-        name_of[o.path_id] = (cls, d.m_Name)
 
     gen = TypeTreeGenerator(env.assets[0].unity_version)
     gen.load_local_game(os.path.abspath(args.game))
     env.typetree_generator = gen
-
-    def read(o):
-        return o.read()
-
-    def pptr_name(p):
-        if p is None or p.m_PathID == 0:
-            return None
-        return name_of.get(p.m_PathID, (None, None))[1]
 
     def dump_obj(o):
         try:
@@ -74,7 +64,7 @@ def main():
     for o in groups.get("FlagData", []):
         d = dump_obj(o)
         if d:
-            flags[d.m_Name] = {"note": d._devNote, "default": d._default}
+            flags[d.m_Name] = {"default": d._default, "values": note_values(d._devNote)}
 
     # ---------------- 任務與檢查點 ----------------
     missions = []
@@ -87,39 +77,12 @@ def main():
             c = dump_obj(p.read())
             if not c:
                 continue
-            conds = []
-            for ci in c._conditions:
-                items = []
-                for it in ci._items:
-                    items.append({
-                        "op": ["Equal", "NotEqual", "Less", "LessEqual", "Greater", "GreaterEqual"][it._compareOp],
-                        "left": var_of(it._value1, name_of, pptr_name),
-                        "right": var_of(it._value2, name_of, pptr_name),
-                    })
-                conds.append({"logic": "OR" if ci._logicOp else "AND",
-                              "devNote": ci._devNote, "items": items})
-            checks.append({
-                "key": c._key,
-                "active": bool(c._active),
-                "desc": c._desc,
-                "position": POSITIONS[c._position] if c._position < len(POSITIONS) else str(c._position),
-                "beforeMainMission": bool(c._beforeMainMission),
-                "dayCheck": bool(c._dayCheck),
-                "time": time_of(c, name_of, pptr_name),
-                "startScript": c._startScript,
-                "nextState": c._nextStateName,
-                "conditions": conds,
-                "setWhenTrue": [{"flag": pptr_name(f._data) or f._data.m_PathID, "value": f._value}
-                                for f in (c._modifyFlagsWhenTrue or [])],
-                "setWhenFalse": [{"flag": pptr_name(f._data) or f._data.m_PathID, "value": f._value}
-                                 for f in (c._modifyFlagsWhenFalse or [])],
-            })
-        missions.append({"name": m._name, "desc": m._desc, "init": m._initKey,
-                         "current": m._currentKey, "checks": checks})
+            checks.append({"key": c._key, "time": time_of(c), "startScript": c._startScript})
+        missions.append({"name": m._name, "checks": checks})
 
     # ---------------- 汗青書 ----------------
     # LibraryItemData 的 _title 只是開發用舊名（例：20000＝「逃亡」），
-    # 實際顯示名稱在語系字串表（level0：Library/Title/<id>）。兩種都輸出，讓驗證器比對。
+    # 實際顯示名稱在語系字串表（level0：Library/Title/<id>），找不到才退回舊名。
     localization = read_localization(data, "level0")
     endings = []
     for o in groups.get("LibraryItemData", []):
@@ -129,9 +92,7 @@ def main():
         if not re.fullmatch(r"2\d{4}", d.m_Name):
             continue
         endings.append({"id": d.m_Name, "no": int(d.m_Name) - 19999,
-                        "title": localization.get("Title/" + d.m_Name) or d._title,
-                        "desc": localization.get("Desc/" + d.m_Name) or d._desc,
-                        "devTitle": d._title, "count": d._count})
+                        "title": localization.get("Title/" + d.m_Name) or d._title})
     endings.sort(key=lambda e: e["no"])
 
     # ---------------- Lua 劇本 ----------------
@@ -175,7 +136,8 @@ def main():
             "setFlags": [{"flag": f, "value": v} for f, v in sorted(e["setFlags"])],
             "nextScripts": sorted(e["nextScripts"]),
             "refs": sorted(e["refs"]),
-            "endingOpens": sorted(e["endingOpens"].values(), key=lambda x: (x["id"], x["line"])),
+            "endingOpens": sorted(e["endingOpens"].values(),
+                                  key=lambda x: (x["id"], json.dumps(x["guards"], sort_keys=True))),
         }
     scripts = out_scripts
 
@@ -184,24 +146,25 @@ def main():
     write(os.path.join(args.out, "missions.json"), missions)
     write(os.path.join(args.out, "endings.json"), endings)
     write(os.path.join(args.out, "scripts.json"), scripts)
-    write_report(os.path.join(args.out, "report.md"), missions, endings)
     print(f"flags={len(flags)} missions={len(missions)} checks={sum(len(m['checks']) for m in missions)} "
           f"endings={len(endings)} scripts={len(scripts)}")
 
 
-POSITIONS = ["無", "正心堂", "校場", "煉丹房", "鍛冶場", "後山", "弟子房", "大門",
-             "講經堂", "伙房", "女弟子房", "神秘房子"]
-CHECK_TYPE = ["常數", "角色數值", "好感度", "旗標", "書籍", "雜物", "貴重品", "隨機值",
-              "數值群組", "遊戲時間", "技能", "秘笈等級", "已開發項目", "開發項目等級",
-              "書籍精通", "風雲史", "條件設定"]
-TIME_CHECK = {0: "無", 1: "特定", 2: "區間", 3: "週期"}
+def note_values(note):
+    """開發備註裡列出的值域（例：「1:青城 2:崆峒」→ [1, 2]），只留數字，不帶說明文字。"""
+    values = set()
+    for line in re.split(r"[\r\n]", note or ""):
+        m = re.match(r"\s*(-?\d+)\s*[:.．]\s*\S", line)
+        if m:
+            values.add(int(m.group(1)))
+    return sorted(values)
 
 
 def gt(t):
     return None if t is None else [t.Year, t.Month, t.Stage]
 
 
-def time_of(c, name_of, pptr_name):
+def time_of(c):
     t = c._timeCheckType
     if not c._dayCheck:
         return {"type": "無"}
@@ -223,7 +186,8 @@ def ending_opens(text):
     """找出每個 endgamepanel.Open("2xxxx")，以及包住它的 if 條件。
 
     遊戲腳本用 `checkpointmanager.Switch("M20008_02")` 表示「旗標 M20008 == 2」；
-    `Ch_...`／`choice_...` 則是玩家選項（一定可選）。回傳的 guards 就是該結局的分支條件。
+    `Ch_...`／`choice_...` 則是玩家選項（一定可選）。回傳的 guards 就是該結局的分支條件；
+    其他 Lua 條件只記成 {"kind": "script"}，不保留劇本原文。
     """
     lines = text.split("\n")
     sw = {m.group(1): m.group(2) for m in SWITCH_DECL.finditer(text)}
@@ -256,74 +220,14 @@ def ending_opens(text):
             else:
                 mm = re.search(r'checkpointmanager\.Switch\("([^"]+)"\)\s*==\s*(\d+)', cond)
                 if not mm:
-                    text = cond
-                    for pre in ("elseif ", "if "):
-                        if text.startswith(pre):
-                            text = text[len(pre):]
-                            break
-                    if text.endswith(" then"):
-                        text = text[:-5]
-                    guards.append({"kind": "script", "text": text})
+                    guards.append({"kind": "script"})
                     continue
                 key, value = mm.group(1), int(mm.group(2))
             fk = FLAG_KEY.match(key)
             guards.append({"kind": "flag", "key": fk.group(1), "value": int(fk.group(2))} if fk
                           else {"kind": "checkpoint", "key": key, "value": value})
-        result.append({"id": m.group(1), "line": i + 1, "guards": guards})
+        result.append({"id": m.group(1), "guards": guards})
     return result
-
-
-def var_of(p, name_of, pptr_name):
-    """把 StatGroupVariable PPtr 轉成可判讀的結構。"""
-    if p is None or p.m_PathID == 0:
-        return None
-    name = pptr_name(p)
-    try:
-        v = p.read()
-    except Exception:
-        return {"name": name}
-    if not hasattr(v, "_groupType"):
-        return {"name": name}
-    refs = []
-    for r in v._value:
-        ct = CHECK_TYPE[r._checkType] if r._checkType < len(CHECK_TYPE) else str(r._checkType)
-        ref = {"type": ct, "negative": bool(r._negative)}
-        target = None
-        if ct == "常數":
-            ref["constant"] = r._constant
-        elif ct == "旗標":
-            target = pptr_name(r._flag)
-            ref["flag"] = target
-        elif ct == "角色數值":
-            target = pptr_name(r._stat)
-            ref["stat"] = target
-        elif ct == "好感度":
-            target = pptr_name(r._relationship)
-            ref["relationship"] = target
-        elif ct == "隨機值":
-            ref["random"] = [r._randomMin, r._randomMax]
-        elif ct == "貴重品":
-            ref["item"] = pptr_name(r._specialItem)
-        elif ct == "書籍":
-            ref["book"] = pptr_name(r._book)
-        elif ct == "數值群組":
-            ref["group"] = pptr_name(r._statGroup)
-        elif ct == "遊戲時間":
-            bref = pptr_name(r._gameTime)
-            ref["gameTime"] = bref
-            try:
-                g = r._gameTime.read().GameTime
-                ref["at"] = [g.Year, g.Month, g.Stage]
-            except Exception:
-                pass
-        elif ct == "技能":
-            ref["talent"] = pptr_name(r._talentData)
-        elif ct == "風雲史":
-            ref["library"] = pptr_name(r._libraryAchieve)
-        refs.append(ref)
-    return {"name": name, "group": ["Sum", "Max", "Min", "Multiply", "And", "Or"][v._groupType],
-            "refs": refs}
-
 
 
 HANGUL = re.compile(r"[\uac00-\ud7a3]")
@@ -360,99 +264,6 @@ def read_localization(data_dir, filename):
                     break
     return out
 
-
-
-OPS = {"Equal": "=", "NotEqual": "≠", "Less": "<", "LessEqual": "≤",
-       "Greater": ">", "GreaterEqual": "≥"}
-GROUPS = {"Sum": "合計", "Max": "取最大", "Min": "取最小", "Multiply": "相乘", "And": "全部成立", "Or": "任一成立"}
-
-
-def text_var(v):
-    if not v:
-        return "（未設定）"
-    refs = v.get("refs") or []
-    parts = []
-    for r in refs:
-        t = r.get("type")
-        if t == "常數":
-            body = str(r.get("constant"))
-        elif t == "旗標":
-            body = "旗標 " + str(r.get("flag"))
-        elif t == "角色數值":
-            body = "數值 " + str(r.get("stat"))
-        elif t == "好感度":
-            body = "好感 " + str(r.get("relationship"))
-        elif t == "遊戲時間":
-            at = r.get("at")
-            body = "時間 " + ("%d年%d月%s" % (at[0], at[1], {1: "上旬", 2: "中旬", 3: "下旬"}.get(at[2], at[2])) if at else str(r.get("gameTime")))
-        elif t == "隨機值":
-            body = "隨機 %s~%s" % tuple(r.get("random") or ("?", "?"))
-        elif t == "貴重品":
-            body = "貴重品 " + str(r.get("item"))
-        elif t == "書籍":
-            body = "書 " + str(r.get("book"))
-        elif t == "技能":
-            body = "技能 " + str(r.get("talent"))
-        elif t == "數值群組":
-            body = "群組 " + str(r.get("group"))
-        elif t == "風雲史":
-            body = "風雲史 " + str(r.get("library"))
-        else:
-            body = t
-        if r.get("negative"):
-            body = "-" + body
-        parts.append(body)
-    if not parts:
-        return v.get("name") or "（空）"
-    if len(parts) == 1:
-        return parts[0]
-    return "%s（%s）" % (GROUPS.get(v.get("group"), v.get("group")), "、".join(parts))
-
-
-def text_time(t):
-    if not t or t.get("type") == "無":
-        return "不限時間"
-
-    def s(v):
-        return "%d年%d月%s" % (v[0], v[1], {1: "上旬", 2: "中旬", 3: "下旬"}.get(v[2], v[2])) if v else "?"
-
-    if t["type"] == "特定":
-        return s(t.get("at"))
-    if t["type"] == "區間":
-        return s(t.get("from")) + " ～ " + s(t.get("to"))
-    return s(t.get("from")) + " 起（週期）"
-
-
-def text_cond(c):
-    items = ["%s %s %s" % (text_var(i.get("left")), OPS.get(i.get("op"), i.get("op")), text_var(i.get("right")))
-             for i in c["items"]]
-    return (" %s " % ("且" if c["logic"] == "AND" else "或")).join(items) if items else "（無條件）"
-
-
-def write_report(path, missions, endings):
-    out = ["# 遊戲內事件判定（自動產生）", "",
-           "由 `tools/game-extract/extract.py` 從遊戲本體抽出，僅供整理攻略時對照，請勿手改。", ""]
-    for m in missions:
-        out.append("")
-        out.append("## %s%s" % (m["name"], ("　" + m["desc"]) if m["desc"] else ""))
-        for c in m["checks"]:
-            out.append("")
-            out.append("- 檢查點：`%s`%s%s" % (c["key"], "（停用）" if not c["active"] else "",
-                                            "　地點：" + c["position"] if c["position"] != "無" else ""))
-            out.append("  - 時間：%s" % text_time(c["time"]))
-            if c["conditions"]:
-                for cond in c["conditions"]:
-                    out.append("  - 條件：%s" % text_cond(cond))
-            if c["startScript"]:
-                out.append("  - 劇本：`%s`" % c["startScript"])
-            if c["setWhenTrue"]:
-                out.append("  - 成立時設定：" + "、".join("%s=%d" % (f["flag"], f["value"]) for f in c["setWhenTrue"]))
-            if c["setWhenFalse"]:
-                out.append("  - 不成立時設定：" + "、".join("%s=%d" % (f["flag"], f["value"]) for f in c["setWhenFalse"]))
-    out += ["", "# 汗青書", ""]
-    for e in endings:
-        out.append("- %d　%s" % (e["no"], e["title"]))
-    open(path, "w", encoding="utf-8").write("\n".join(out) + "\n")
 
 
 def write(path, obj):

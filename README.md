@@ -110,3 +110,12 @@
 ## 特別感謝
 
 - [活俠傳 wiki](https://smilin.net/LoM-wiki/)（[GitHub：Mr-Smilin/LoM-wiki](https://github.com/Mr-Smilin/LoM-wiki)）：「事件攻略」的路線、分歧條件、結局圖鑑，以及「事件任務」的養成事件名稱，都依 wiki 整理。感謝所有編輯與貢獻者。
+
+## 授權
+
+- 程式碼：[MIT License](LICENSE)。
+- 「事件攻略」「事件任務」所用的 wiki 衍生資料：依 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant) 使用（來源：活俠傳 wiki 與其貢獻者，[貢獻者名單](https://smilin.net/LoM-wiki/json/contributors.json)），僅限非商業用途，轉散布須維持相同授權。
+- wiki 不保證內容正確；若本專案轉為商業用途、移除標示或影響 wiki 伺服器，wiki 維護者得撤銷授權。
+- 遊戲圖片屬原開發團隊（鳥熊團隊），不在上述授權內，本專案不散布。
+
+完整說明見 [NOTICE-wiki-data.md](NOTICE-wiki-data.md)。

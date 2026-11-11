@@ -46,6 +46,7 @@ for root in "$STAGE/full" "$STAGE/plugin"; do
     cp "$DLL" "$root/BepInEx/plugins/LegendOfMortal_InternalMod/"
     readme > "$root/README.txt"
     sed 's/$/\r/' "$REPO/LICENSE" > "$root/LICENSE.txt"
+    sed 's/$/\r/' "$REPO/NOTICE-wiki-data.md" > "$root/NOTICE-wiki-data.txt"
 done
 
 # 4. 壓縮（檔名全 ASCII，避免 Windows 解壓亂碼）

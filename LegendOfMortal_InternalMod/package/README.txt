@@ -111,6 +111,18 @@ Linux / Steam Deck 請一併清空啟動選項。
   （GitHub：https://github.com/Mr-Smilin/LoM-wiki）
   事件攻略的路線、分歧條件、結局圖鑑，以及事件任務的養成事件名稱，
   都依 wiki 整理。感謝所有編輯與貢獻者。
+  貢獻者名單：https://smilin.net/LoM-wiki/json/contributors.json
+
+
+■ 授權
+----------------------------------------
+・程式碼：MIT License（見 LICENSE.txt）。
+・事件攻略、事件任務所用的 wiki 衍生資料：CC BY-NC-SA 4.0
+  （來源：活俠傳 wiki 與其貢獻者），僅限非商業用途，轉散布須維持相同授權。
+・wiki 不保證內容正確；若轉為商業用途、移除標示或影響 wiki 伺服器，
+  wiki 維護者得撤銷授權。
+・遊戲圖片屬原開發團隊（鳥熊團隊），不在上述授權內。
+・詳見 NOTICE-wiki-data.txt。
 
 
 ■ 第三方元件

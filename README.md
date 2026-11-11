@@ -114,8 +114,11 @@
 ## License
 
 - Source code: [MIT License](LICENSE).
-- Wiki-derived data used by "Event Guide" and "Event Missions": used under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (source: Legend of Mortal Wiki and its contributors, [contributor list](https://smilin.net/LoM-wiki/json/contributors.json)). Non-commercial use only; redistribution must keep the same license.
-- The wiki does not guarantee its content is accurate. The wiki maintainers may revoke the license if this project becomes commercial, drops attribution, or affects the wiki's servers.
-- Game images belong to the original developer (鳥熊團隊) and are not covered by the above; this project does not distribute them.
+- Wiki-derived data used by "Event Guide" and "Event Missions": from [LoM-Wiki](https://smilin.net/LoM-wiki/), used under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Team / contributor list: <https://smilin.net/LoM-wiki/json/contributors.json>. Non-commercial use only; redistribution must keep the same license.
+- 本站不保證內容的絕對正確性、即時性與完整性。若因使用本站資料而產生任何客訴或爭議，本站概不負責。
+  (The wiki does not guarantee the accuracy, timeliness, or completeness of its content and is not liable for complaints or disputes arising from its use.)
+- 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自本站之資料全數下架。
+  (The wiki may unilaterally terminate the license and require takedown of wiki-sourced data if this project becomes commercial, fails to attribute, or affects the wiki's servers.)
+- Game images belong to the original developer (鳥熊團隊) and are not covered by CC BY-NC-SA 4.0; obtain permission from the original authors if needed. This project does not distribute them.
 
 See [NOTICE-wiki-data.md](NOTICE-wiki-data.md) for details.

@@ -199,7 +199,8 @@ namespace LegendOfMortal_InternalMod.UI
         /// 事件攻略／事件任務的資料來源標示（CC BY-NC-SA 4.0 要求標示來源與授權；僅顯示文字，不提供連結）
         private static void WikiCredit()
         {
-            GUILayout.Label("事件資料依 CC BY-NC-SA 4.0 授權使用，來源：@活俠傳wiki　https://smilin.net/LoM-wiki/", S.Desc);
+            GUILayout.Label("事件資料依 CC BY-NC-SA 4.0 授權使用，來源：@活俠傳wiki", S.Desc);
+            GUILayout.Label("https://smilin.net/LoM-wiki/", S.Desc);
         }
 
         private static void DrawGuide()

@@ -22,7 +22,12 @@ namespace LegendOfMortal_InternalMod.UI
         /// <summary>視窗目前位置（GUI 座標，左上原點），給 ClickBlocker 對齊用。</summary>
         public static Rect WindowRect => rect;
 
-        private const int WindowId = 2077;
+        /// <summary>事件詳情視窗位置（未顯示時為 Rect.zero），給 ClickBlocker 對齊用。</summary>
+        public static Rect PopupRect => popupRect;
+        private static Rect popupRect;
+
+        private const int WindowId = 2077, PopupId = 2078;
+        private static bool mapPopup;
         private const float BaseW = 845f, BaseScrollH = 600f;   // 845：容納 7 個分頁（含「雜物」），避免分頁列把視窗撐寬
         private static Rect rect;
         private static float rectScale;
@@ -47,6 +52,11 @@ namespace LegendOfMortal_InternalMod.UI
                 rect = new Rect(S.Px(60), S.Px(185), S.Px(BaseW), 0);
             }
             rect = GUILayout.Window(WindowId, rect, id => DrawMain(plugin), "唐門密卷", GUILayout.Width(S.Px(BaseW)));
+
+            // 路線地圖的事件詳情視窗；是否顯示只在 Layout 決定，同一幀各事件一致
+            if (Event.current.type == EventType.Layout)
+                mapPopup = tab == 3 && guideSub == 0 && guideItems != null && guideError == null && GuideMapView.PopupOpen;
+            popupRect = mapPopup ? GuideMapView.DrawPopup(PopupId, rect, guideNow, EventGuide.PlayerRoutes(guideNow)) : Rect.zero;
         }
 
         private static void DrawMain(Plugin plugin)

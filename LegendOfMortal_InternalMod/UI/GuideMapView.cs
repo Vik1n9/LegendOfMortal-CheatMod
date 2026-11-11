@@ -15,24 +15,34 @@ namespace LegendOfMortal_InternalMod.UI
     {
         // ---- 版面（以 1920x1080 為基準，經 S.Px 縮放） ----
         private const float BandH = 56f, Pitch = 98f, NodeH = 64f, LaneGap = 12f;
-        private const int Lanes = 5;
+        private const int Lanes = 5, SheetCols = 5;
 
         private static string selected;      // 節點 Id 或 "E<編號>"
         private static string pending;       // 點擊後在下一個 Layout 才套用，避免同一事件內版面不一致
-        private static bool locate = true;   // 要求把捲動位置移到目前節點
+        private static bool locate = true;   // 要求把捲動位置移到 locateId（null＝目前節點）
+        private static string locateId;
         private static int sheetIndex;       // 目前顯示的分頁（GuideMapData.Sheets 的索引）
         private static int pendingSheet = -1;
         private static readonly Dictionary<MapSheet, string> lastSelected = new();
         private static bool endingAll;
         private static GUISkin stylesFor;
-        private static GUIStyle labelStyle, bandTitle, bandLane, arrowStyle;
+        private static GUIStyle labelStyle, bandTitle, bandLane, arrowStyle, targetText;
 
         /// <summary>給外層捲動區用：非 null 時把捲動位置設成此值後清除。</summary>
         public static float? ScrollRequest;
 
         private static readonly Color PaperBranch = Hex(0xF3DFB4);
-        private static readonly Color PaperEnding = Hex(0xEBCFC8);
+        private static readonly Color PaperEnding = Hex(0xE6BE5C);   // 結局群組：深黃
+        private static readonly Color PaperOk = Hex(0xCDE6C0);       // 目前條件能進入
+        private static readonly Color PaperFail = Hex(0xEDC0B9);     // 已錯過／不在路線上，無法達成
         private static readonly Color Good = Hex(0x2E7D32);
+        // 點選中的事件與相連路線：藍色，和朱紅（目前位置）、金黃（分歧）、紅底（結局）都分得開
+        private static readonly Color Pick = Hex(0x1E5AA8);
+
+        /// <summary>節點底色依據：條件判定較貴，每秒重算一次（含其他分頁，詳情視窗的跨頁按鈕也要用）。</summary>
+        private enum Tone { Plain, Ok, Fail }
+        private static readonly Dictionary<MapNode, Tone> tones = new();
+        private static float tonesNext;
 
         private static Color Hex(int rgb) => new Color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, 1f);
 
@@ -44,7 +54,8 @@ namespace LegendOfMortal_InternalMod.UI
             if (Event.current.type == EventType.Layout) ApplyPending(sheets);
             var sheet = sheets[sheetIndex];
 
-            int pick = GUILayout.Toolbar(sheetIndex, sheets.Select(s => s.Tab).ToArray(), S.Tab);
+            // 主線＋九位心上人共 10 頁，排成一列會比視窗內寬還寬、把整頁內容撐出畫面，故每列 5 個
+            int pick = GUILayout.SelectionGrid(sheetIndex, sheets.Select(s => s.Tab).ToArray(), SheetCols, S.Tab);
             if (pick != sheetIndex) pendingSheet = pick;
 
             var current = GuideMap.FindCurrent(sheet, now, routes);
@@ -52,15 +63,15 @@ namespace LegendOfMortal_InternalMod.UI
 
             GUILayout.Label(sheet.Intro, S.Desc);
             if (sheet.Lover >= 0) BondLine(sheet);
-            GUILayout.Label("點選地圖上的方塊查看分歧、路線與條件。" +
-                            "金黃底＝分歧點，紅底＝結局群組，朱紅外框＝你現在的位置（或下一步），淡色＝不在你目前的路線上。", S.Desc);
+            GUILayout.Label("點選地圖上的方塊，會跳出視窗顯示分歧、路線與條件。" +
+                            "綠底＝目前條件能進入，紅底＝已錯過或不在你的路線上（無法達成），藍框與藍線＝點選中的事件（加光暈）與前後相連的路線，深黃底＝結局群組，" +
+                            "其餘維持原色（金黃底＝分歧點、紙色＝條件未滿足或尚未判定）。朱紅外框＝你現在的位置（或下一步）。", S.Desc);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("定位到目前", GUILayout.Width(S.Px(150))) && current != null) { pending = current.Id; locate = true; }
+            if (GUILayout.Button("定位到目前", GUILayout.Width(S.Px(150))) && current != null) { pending = current.Id; locate = true; locateId = null; }
             GUILayout.Label(current != null ? $"{(GuideMap.StateOf(current, now, routes) == NodeState.Current ? "目前" : "下一步")}：<b>{current.Title}</b>（{TimeText(current)}）" : "你的路線上已沒有後續節點", S.RowDesc);
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
 
-            DrawDetail(now, routes);
             GUILayout.Space(S.Px(8));
             DrawCanvas(sheet, now, routes, current);
         }
@@ -74,6 +85,7 @@ namespace LegendOfMortal_InternalMod.UI
                 sheetIndex = pendingSheet;
                 lastSelected.TryGetValue(sheets[sheetIndex], out selected);
                 locate = selected == null;
+                locateId = null;
             }
             pendingSheet = -1;
             if (pending == null) return;
@@ -84,6 +96,7 @@ namespace LegendOfMortal_InternalMod.UI
             }
             selected = pending;
             pending = null;
+            if (openRequest) { popupOpen = true; openRequest = false; }
         }
 
         private static void BondLine(MapSheet sheet)
@@ -120,25 +133,67 @@ namespace LegendOfMortal_InternalMod.UI
 
             float BandTop(int s) => area.y + S.Px(BandH) * s + S.Px(Pitch) * secs[s].Row;
 
+            // 點選中的節點（結局則為其結局群組）與前後直接相連的節點
+            var pick = selected == null ? null : nodes.FirstOrDefault(n => IsLocateTarget(n, selected));
+            var linked = new HashSet<MapNode>();
+            if (pick != null)
+                foreach (var n in nodes)
+                    if (n.AllTargets.Contains(pick.Id)) linked.Add(n);
+                    else if (pick.AllTargets.Contains(n.Id)) linked.Add(n);
+
+            if (Event.current.type == EventType.Layout) RefreshTones(now, routes);
             bool repaint = Event.current.type == EventType.Repaint;
             if (repaint)
             {
-                DrawEdges(secs, nodes, NodeRect, BandTop, now, routes);
+                DrawEdges(secs, nodes, NodeRect, BandTop, now, routes, pick);
                 for (int s = 0; s < secs.Length; s++) DrawBand(secs[s], s, area, laneW);
             }
 
+            string target = locate ? locateId ?? current?.Id : null;
             foreach (var n in nodes)
             {
                 var r = NodeRect(n);
                 var st = GuideMap.StateOf(n, now, routes);
-                if (repaint) DrawNode(n, r, st, n == current);
-                if (GUI.Button(r, GUIContent.none, GUIStyle.none)) pending = n.Id;
-                if (locate && n == current && repaint)
+                if (repaint) DrawNode(n, r, st, n == current, n == pick, linked.Contains(n));
+                if (GUI.Button(r, GUIContent.none, GUIStyle.none)) { pending = n.Id; openRequest = true; }
+                if (repaint && target != null && IsLocateTarget(n, target))
                 {
                     ScrollRequest = Mathf.Max(0, r.y - S.Px(330));
-                    locate = false;
+                    target = null;
                 }
             }
+            // 找到就捲過去；這一頁沒有該節點（例：結局不在任何群組）也一併放棄，不留到之後亂跳
+            if (repaint && locate) { locate = false; locateId = null; }
+        }
+
+        private static void RefreshTones(int now, Route routes)
+        {
+            if (Time.unscaledTime < tonesNext) return;
+            tonesNext = Time.unscaledTime + 1f;
+            tones.Clear();
+            foreach (var sheet in GuideMapData.Sheets)
+                foreach (var n in sheet.Nodes) tones[n] = ToneOf(n, now, routes);
+        }
+
+        /// <summary>
+        /// 不在路線上＝無法達成；已過且條件有缺＝錯過；尚未過、在路線上且沒有缺的條件＝能進入
+        /// （分歧點的條件只是相關狀態，在路線上就算能進入）；其餘維持原色。
+        /// </summary>
+        private static Tone ToneOf(MapNode n, int now, Route routes)
+        {
+            if (n.Kind == NodeKind.EndingGroup) return Tone.Plain;
+            var st = GuideMap.StateOf(n, now, routes);
+            if (st == NodeState.OffRoute) return Tone.Fail;
+            bool lacking = n.Kind != NodeKind.Branch && GuideMap.Classify(n.Reqs).Missing.Count > 0;
+            if (st == NodeState.Past) return lacking ? Tone.Fail : Tone.Plain;
+            return lacking ? Tone.Plain : Tone.Ok;
+        }
+
+        /// <summary>節點本身，或結局所屬的結局群組。</summary>
+        private static bool IsLocateTarget(MapNode n, string target)
+        {
+            if (n.Id == target) return true;
+            return n.Kind == NodeKind.EndingGroup && GuideMap.IsEnding(target, out int no) && GuideMap.EndingsOf(n).Any(e => e.No == no);
         }
 
         private static int SectionOf(MapSection[] secs, MapNode n)
@@ -160,28 +215,31 @@ namespace LegendOfMortal_InternalMod.UI
                     GUI.Label(new Rect(area.x + laneW * i, r.y + S.Px(30), laneW, S.Px(22)), sec.Lanes[i], bandLane);
         }
 
-        private static void DrawEdges(MapSection[] secs, MapNode[] nodes, Func<MapNode, Rect> rectOf, Func<int, float> bandTop, int now, Route routes)
+        private static void DrawEdges(MapSection[] secs, MapNode[] nodes, Func<MapNode, Rect> rectOf, Func<int, float> bandTop, int now, Route routes, MapNode pick)
         {
-            foreach (var from in nodes)
-            {
-                var taken = GuideMap.TakenOption(from);
-                var fr = rectOf(from);
-                foreach (var tid in from.AllTargets.Distinct())
+            // 先畫一般線，再畫點選中節點的進出線，藍線疊在最上面不被其他線蓋住
+            for (int pass = 0; pass < 2; pass++)
+                foreach (var from in nodes)
                 {
-                    var to = GuideMap.Get(tid);
-                    if (to == null || !nodes.Contains(to)) continue;
-                    var tr = rectOf(to);
-                    bool onTaken = taken != null && taken.To.Contains(tid);
-                    bool touch = selected == from.Id || selected == to.Id;
-                    bool off = (to.Route & routes) == 0 || (from.Route & routes) == 0;
-                    Color c = onTaken ? S.Vermilion : touch ? S.Ink : new Color(S.Frame.r, S.Frame.g, S.Frame.b, off ? 0.22f : 0.6f);
-                    float w = onTaken || touch ? S.Px(3) : S.Px(2);
-                    // 跨到下一段時在段落標題上方匯流，標題底下只留一支箭頭，不在標題線下擠成一團
-                    int ts = SectionOf(secs, to);
-                    float? merge = ts != SectionOf(secs, from) ? bandTop(ts) - S.Px(8) : (float?)null;
-                    DrawEdge(fr, tr, c, w, merge);
+                    var taken = GuideMap.TakenOption(from);
+                    var fr = rectOf(from);
+                    foreach (var tid in from.AllTargets.Distinct())
+                    {
+                        var to = GuideMap.Get(tid);
+                        if (to == null || !nodes.Contains(to)) continue;
+                        bool touch = pick != null && (from == pick || to == pick);
+                        if (touch != (pass == 1)) continue;
+                        var tr = rectOf(to);
+                        bool onTaken = taken != null && taken.To.Contains(tid);
+                        bool off = (to.Route & routes) == 0 || (from.Route & routes) == 0;
+                        Color c = touch ? Pick : onTaken ? S.Vermilion : new Color(S.Frame.r, S.Frame.g, S.Frame.b, off ? 0.22f : 0.6f);
+                        float w = touch ? S.Px(4) : onTaken ? S.Px(3) : S.Px(2);
+                        // 跨到下一段時在段落標題上方匯流，標題底下只留一支箭頭，不在標題線下擠成一團
+                        int ts = SectionOf(secs, to);
+                        float? merge = ts != SectionOf(secs, from) ? bandTop(ts) - S.Px(8) : (float?)null;
+                        DrawEdge(fr, tr, c, w, merge);
+                    }
                 }
-            }
         }
 
         private static void DrawEdge(Rect a, Rect b, Color c, float w, float? merge = null)
@@ -197,14 +255,27 @@ namespace LegendOfMortal_InternalMod.UI
             GUI.color = old;
         }
 
-        private static void DrawNode(MapNode n, Rect r, NodeState st, bool isCurrent)
+        private static void DrawNode(MapNode n, Rect r, NodeState st, bool isCurrent, bool picked, bool linked)
         {
-            Color fill = n.Kind == NodeKind.Branch ? PaperBranch : n.Kind == NodeKind.EndingGroup ? PaperEnding : S.Paper;
-            float alpha = st == NodeState.OffRoute ? 0.4f : st == NodeState.Past ? 0.72f : 1f;
-            if (st == NodeState.Past) fill = Color.Lerp(fill, new Color(0.62f, 0.6f, 0.57f), 0.4f);
-            bool sel = selected == n.Id;
-            Color border = isCurrent ? S.Vermilion : sel ? S.Ink : new Color(S.Frame.r, S.Frame.g, S.Frame.b, 0.7f);
-            float bw = isCurrent || sel ? S.Px(3) : S.Px(1.5f);
+            tones.TryGetValue(n, out var tone);
+            // 優先序：結局群組（深黃）＞無法達成（紅）＞能進入（綠）＞原色
+            // 點選中與相連的節點保留狀態底色，只靠藍框、藍線與光暈標示
+            Color fill = n.Kind == NodeKind.EndingGroup ? PaperEnding
+                : tone == Tone.Fail ? PaperFail : tone == Tone.Ok ? PaperOk
+                : n.Kind == NodeKind.Branch ? PaperBranch : S.Paper;
+            // 紅底本身就表示無法達成，不再淡化到看不出顏色
+            float alpha = tone == Tone.Fail ? 0.85f : st == NodeState.OffRoute ? 0.4f : st == NodeState.Past ? 0.72f : 1f;
+            if (st == NodeState.Past && tone != Tone.Fail && !picked && !linked) fill = Color.Lerp(fill, new Color(0.62f, 0.6f, 0.57f), 0.4f);
+            Color border = picked || linked ? Pick : isCurrent ? S.Vermilion : new Color(S.Frame.r, S.Frame.g, S.Frame.b, 0.7f);
+            float bw = picked ? S.Px(4) : linked || isCurrent ? S.Px(3) : S.Px(1.5f);
+            if (picked)
+            {
+                // 點選中的節點：外圈光暈，不受淡化影響
+                alpha = 1f;
+                float g = S.Px(5);
+                Fill(new Rect(r.x - g, r.y - g, r.width + g * 2, r.height + g * 2), new Color(Pick.r, Pick.g, Pick.b, 0.3f));
+            }
+            else if (linked) alpha = Mathf.Max(alpha, 0.85f);
             Fill(r, new Color(border.r, border.g, border.b, border.a * alpha));
             Fill(new Rect(r.x + bw, r.y + bw, r.width - bw * 2, r.height - bw * 2), new Color(fill.r, fill.g, fill.b, alpha));
 
@@ -224,6 +295,15 @@ namespace LegendOfMortal_InternalMod.UI
                 float tw = S.Px(14) * tag.Length + S.Px(10), th = S.Px(16);
                 var tr = new Rect(r.xMax - tw, r.y - th + S.Px(1), tw, th);
                 Fill(tr, S.Vermilion);
+                GUI.Label(tr, "<b>" + tag + "</b>", arrowStyle);
+            }
+            if (picked)
+            {
+                // 「查看中」掛在左上角，和右上角的「目前」標籤錯開
+                const string tag = "查看中";
+                float tw = S.Px(14) * tag.Length + S.Px(10), th = S.Px(16);
+                var tr = new Rect(r.x, r.y - th - S.Px(4) + S.Px(1), tw, th);
+                Fill(tr, Pick);
                 GUI.Label(tr, "<b>" + tag + "</b>", arrowStyle);
             }
         }
@@ -247,24 +327,57 @@ namespace LegendOfMortal_InternalMod.UI
             return TimeText(n);
         }
 
-        // ================= 詳情 =================
-        private static void DrawDetail(int now, Route routes)
+        // ================= 詳情（跳出視窗） =================
+        private static bool popupOpen, openRequest;
+        private static string popupShown;   // 只在 Layout 更新，避免主視窗同一事件改了 selected 造成版面前後不一致
+        private static Vector2 popupScroll;
+
+        public static bool PopupOpen => popupOpen;
+
+        /// <summary>
+        /// 擺在主視窗旁（優先右側）的詳情視窗，不遮住路線地圖：開著時仍可點地圖換事件；點 × 或按 Esc 關閉。
+        /// 回傳視窗範圍，給 ClickBlocker 一併擋下遊戲點擊。
+        /// </summary>
+        public static Rect DrawPopup(int id, Rect owner, int now, Route routes)
         {
-            GUILayout.BeginVertical(GUI.skin.box);
-            try
+            float gap = S.Px(10);
+            float w = S.Px(760);
+            float right = Screen.width - owner.xMax - gap * 2, left = owner.x - gap * 2;
+            float x;
+            if (right >= S.Px(480) || right >= left) { w = Mathf.Min(w, right); x = owner.xMax + gap; }
+            else { w = Mathf.Min(w, left); x = owner.x - gap - w; }
+            var r = new Rect(x, owner.y, Mathf.Max(w, S.Px(400)), owner.height);
+            GUI.Window(id, r, _ => PopupBody(r, now, routes), "事件詳情");
+            return r;
+        }
+
+        private static void PopupBody(Rect r, int now, Route routes)
+        {
+            var ev = Event.current;
+            if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape) { popupOpen = false; ev.Use(); return; }
+            if (GUI.Button(new Rect(r.width - S.Px(48), S.Px(14), S.Px(34), S.Px(34)), "×", S.Close)) popupOpen = false;
+            if (ev.type == EventType.Layout && popupShown != selected) { popupShown = selected; popupScroll = Vector2.zero; }
+
+            popupScroll = GUILayout.BeginScrollView(popupScroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUILayout.ExpandHeight(true));
+            // 同主視窗：固定內容寬度，長文字在視窗內折行
+            float contentW = r.width - GUI.skin.window.padding.horizontal - GUI.skin.verticalScrollbar.fixedWidth - S.Px(14);
+            GUILayout.BeginVertical(GUILayout.Width(contentW));
+            try { Detail(popupShown, now, routes); }
+            finally { GUILayout.EndVertical(); GUILayout.EndScrollView(); }
+        }
+
+        private static void Detail(string id, int now, Route routes)
+        {
+            if (GuideMap.IsEnding(id, out int no))
             {
-                if (GuideMap.IsEnding(selected, out int no))
-                {
-                    var e = GuideMap.GetEnding(no);
-                    if (e != null) EndingCard(e, now, routes, false);
-                    else GUILayout.Label("找不到結局 " + no, S.Desc);
-                    return;
-                }
-                var n = GuideMap.Get(selected);
-                if (n == null) { GUILayout.Label("請點選地圖上的方塊。", S.Desc); return; }
-                NodeDetail(n, now, routes);
+                var e = GuideMap.GetEnding(no);
+                if (e != null) EndingCard(e, now, routes, false);
+                else GUILayout.Label("找不到結局 " + no, S.Desc);
+                return;
             }
-            finally { GUILayout.EndVertical(); }
+            var n = GuideMap.Get(id);
+            if (n == null) { GUILayout.Label("請點選地圖上的方塊。", S.Desc); return; }
+            NodeDetail(n, now, routes);
         }
 
         private static void NodeDetail(MapNode n, int now, Route routes)
@@ -274,7 +387,8 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.BeginHorizontal();
             GUILayout.Label($"{n.Title}　<size={S.Px(15)}><color=#6B5D50>{kind}</color></size>", S.Entry);
             GUILayout.FlexibleSpace();
-            GUILayout.Label(StateText(st), S.Desc);
+            // 不折行的樣式：S.Desc 會折行，在水平列裡被算窄而裁掉最後一個字
+            GUILayout.Label(StateText(st), S.RowDesc);
             GUILayout.EndHorizontal();
 
             GUILayout.Label(OnPaper($"時間：{TimeText(n)}　·　路線：{RouteMask(n.Route)}"), S.Desc);
@@ -292,13 +406,29 @@ namespace LegendOfMortal_InternalMod.UI
             TargetRow("相關：", n.See);
         }
 
-        private static void TargetRow(string title, string[] ids)
+        /// <summary>「標題：[按鈕][按鈕]…」放不下就換行，按鈕列不把視窗撐寬。</summary>
+        private static void TargetRow(string title, string[] ids, float titleW = 90)
         {
             if (ids.Length == 0) return;
             GUILayout.BeginHorizontal();
-            GUILayout.Label(title, S.Row, GUILayout.Width(S.Px(90)));
-            foreach (var id in ids) TargetButton(id);
+            GUILayout.Label(title, S.Row, GUILayout.Width(S.Px(titleW)));
+            GUILayout.BeginVertical();
+            float used = 0, max = S.Px(540 - titleW);
+            GUILayout.BeginHorizontal();
+            foreach (var id in ids)
+            {
+                float w = TargetWidth(id);
+                if (used > 0 && used + w > max)
+                {
+                    GUILayout.FlexibleSpace(); GUILayout.EndHorizontal();
+                    GUILayout.BeginHorizontal(); used = 0;
+                }
+                TargetButton(id);
+                used += w + S.Px(6);
+            }
             GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
             GUILayout.EndHorizontal();
         }
 
@@ -311,29 +441,7 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.Label(mark + "▸ " + o.Label, S.Entry);
             if (!string.IsNullOrEmpty(o.Result)) GUILayout.Label(OnPaper(o.Result), S.Desc);
             ReqLines(o.Reqs, null);
-            if (o.To.Length > 0)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("去向：", S.Row, GUILayout.Width(S.Px(70)));
-                GUILayout.BeginVertical();
-                float used = 0, max = S.Px(560);
-                GUILayout.BeginHorizontal();
-                foreach (var id in o.To)
-                {
-                    float w = TargetWidth(id);
-                    if (used > 0 && used + w > max)
-                    {
-                        GUILayout.FlexibleSpace(); GUILayout.EndHorizontal();
-                        GUILayout.BeginHorizontal(); used = 0;
-                    }
-                    TargetButton(id);
-                    used += w + S.Px(6);
-                }
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
-                GUILayout.EndVertical();
-                GUILayout.EndHorizontal();
-            }
+            TargetRow("去向：", o.To, 70);
             GUILayout.EndVertical();
         }
 
@@ -349,10 +457,38 @@ namespace LegendOfMortal_InternalMod.UI
 
         private static float TargetWidth(string id) => S.Px(34 + 21 * TargetLabel(id).Length);
 
+        /// <summary>
+        /// 事件按鈕比照地圖底色：結局（群組）深黃、無法達成紅、能進入綠，其餘用一般按鈕。
+        /// </summary>
         private static void TargetButton(string id)
         {
             string label = TargetLabel(id);
-            if (GUILayout.Button(label, GUILayout.Width(TargetWidth(id)))) pending = id;
+            var n = GuideMap.Get(id);
+            Tone tone = Tone.Plain;
+            if (n != null) tones.TryGetValue(n, out tone);
+            bool ending = GuideMap.IsEnding(id, out _) || n?.Kind == NodeKind.EndingGroup;
+            (Color fill, Color edge)? look = ending ? (PaperEnding, Hex(0x9A7417))
+                : tone == Tone.Fail ? (PaperFail, Hex(0xB3261E))
+                : tone == Tone.Ok ? (PaperOk, Good)
+                : null;
+
+            bool click;
+            if (look is not { } c) click = GUILayout.Button(label, GUILayout.Width(TargetWidth(id)));
+            else
+            {
+                var r = GUILayoutUtility.GetRect(new GUIContent(label), GUI.skin.button, GUILayout.Width(TargetWidth(id)));
+                if (Event.current.type == EventType.Repaint)
+                {
+                    bool hover = r.Contains(Event.current.mousePosition);
+                    float bw = S.Px(hover ? 3 : 2);
+                    Fill(r, c.edge);
+                    Fill(new Rect(r.x + bw, r.y + bw, r.width - bw * 2, r.height - bw * 2), hover ? Color.Lerp(c.fill, Color.white, 0.35f) : c.fill);
+                    GUI.Label(r, label, targetText);
+                }
+                click = GUI.Button(r, GUIContent.none, GUIStyle.none);
+            }
+            // 從詳情視窗跳到別的事件時，左側地圖也捲到該節點（跨分頁時 ApplyPending 會先切頁）
+            if (click) { pending = id; locate = true; locateId = id; }
         }
 
         private static void ReqLines(Req[] reqs, string title)
@@ -383,7 +519,7 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.BeginHorizontal();
             GUILayout.Label($"汗青書 {e.No}　{e.Name}", S.Entry);
             GUILayout.FlexibleSpace();
-            GUILayout.Label(EndingStateText(st), S.Desc);
+            GUILayout.Label(EndingStateText(st), S.RowDesc);
             GUILayout.EndHorizontal();
             string tags = string.IsNullOrEmpty(e.Tags) ? "" : "【" + e.Tags.Replace("、", "】【") + "】";
             GUILayout.Label(OnPaper($"路線：{RouteMask(e.Route)}　{tags}"), S.Desc);
@@ -417,7 +553,7 @@ namespace LegendOfMortal_InternalMod.UI
             NodeState.Current => RichText.Green("▶ 現在／即將發生"),
             NodeState.Past => RichText.Gray("已過"),
             NodeState.OffRoute => RichText.Red("不在你目前的路線上"),
-            _ => RichText.Gray("尚未到"),
+            _ => RichText.Gray("尚未開始"),
         });
 
         private static string EndingStateText(EndingState s) => OnPaper(s switch
@@ -498,6 +634,11 @@ namespace LegendOfMortal_InternalMod.UI
                 padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0),
             };
             arrowStyle.normal.textColor = Color.white;
+            targetText = new GUIStyle(S.Label)
+            {
+                fontSize = GUI.skin.button.fontSize, alignment = TextAnchor.MiddleCenter, wordWrap = false, richText = true, clipping = TextClipping.Clip,
+                padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0),
+            };
         }
     }
 }

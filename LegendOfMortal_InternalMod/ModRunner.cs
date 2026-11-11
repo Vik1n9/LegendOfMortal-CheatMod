@@ -40,7 +40,7 @@ namespace LegendOfMortal_InternalMod
                 Plugin.LogInfo($"主視窗 {(UI.CheatWindow.Visible ? "開啟" : "關閉")}");
             }
 
-            UI.ClickBlocker.Sync(UI.CheatWindow.Visible, UI.CheatWindow.WindowRect);
+            UI.ClickBlocker.Sync(UI.CheatWindow.Visible, UI.CheatWindow.WindowRect, UI.CheatWindow.PopupRect);
             Features.CheatEngine.Tick();
         }
 

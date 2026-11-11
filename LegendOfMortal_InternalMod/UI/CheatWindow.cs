@@ -37,8 +37,9 @@ namespace LegendOfMortal_InternalMod.UI
 
         private static string diceIn, moneyIn = "0", fateIn = "0", statIn = "100";
 
+        // 不列魅力：遊戲只在列舉與語系表留有此屬性，沒有任何劇本、事件或介面使用它；改列有判定的廚藝
         private static readonly GameStatType[] PersonStats =
-            { GameStatType.體力, GameStatType.內力, GameStatType.陰陽內功, GameStatType.輕功, GameStatType.魅力, GameStatType.學問, GameStatType.嘴力, GameStatType.道德, GameStatType.修養, GameStatType.心理衛生 };
+            { GameStatType.體力, GameStatType.內力, GameStatType.陰陽內功, GameStatType.輕功, GameStatType.廚藝, GameStatType.學問, GameStatType.嘴力, GameStatType.道德, GameStatType.修養, GameStatType.心理衛生 };
         private static readonly GameStatType[] SectStats =
             { GameStatType.門派資產, GameStatType.門派名聲, GameStatType.門派人數, GameStatType.向心力, GameStatType.個人貢獻度 };
 
@@ -370,7 +371,7 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.Label("只影響一般遊玩，不會干擾暫停與劇情快轉。", S.Desc);
 
             Section("關於");
-            GUILayout.Label("活俠傳內置 MOD v1.2（適用 崆峒神威 1.0.6001.0）", S.Desc);
+            GUILayout.Label("活俠傳內置 MOD v1.3 Beta（適用 崆峒神威 1.0.6001.0）", S.Desc);
             GUILayout.Label("設定檔：BepInEx/config/LegendOfMortal_InternalMod.cfg", S.Desc);
         }
 

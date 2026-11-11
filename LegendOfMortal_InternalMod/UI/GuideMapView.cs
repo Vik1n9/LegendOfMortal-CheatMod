@@ -533,7 +533,7 @@ namespace LegendOfMortal_InternalMod.UI
         public static void DrawEndings(int now, Route routes)
         {
             EnsureStyles();
-            GUILayout.Label("依 wiki〈汗青書〉整理。已錯過或不在你路線上的結局預設隱藏；結局群組與條件請搭配「路線地圖」查看。", S.Desc);
+            GUILayout.Label("依活俠傳wiki〈汗青書〉整理。已錯過或不在你路線上的結局預設隱藏；結局群組與條件請搭配「路線地圖」查看。", S.Desc);
             bool all = GUILayout.Toolbar(endingAll ? 1 : 0, new[] { "仍可達成", "全部" }, GUILayout.Width(S.Px(260))) == 1;
             endingAll = all;
             int shown = 0;

@@ -15,7 +15,8 @@
 
 ## 安裝
 
-1. 到 [Releases](../../releases/latest) 下載 `LegendOfMortal_InternalMod_v1.3beta_full.zip`。
+1. 到 [v1.3 Beta 發佈頁](../../releases/tag/v1.3beta) 下載 `LegendOfMortal_InternalMod_v1.3beta_full.zip`。
+   （想用穩定版可到 [最新正式版](../../releases/latest) 下載 v1.2。）
    （已安裝 BepInEx 5 的玩家可改下載 `plugin_only` 版。）
 2. Steam 收藏庫對《活俠傳》按右鍵 → 管理 → 瀏覽本機檔案。
 3. 把壓縮檔內容全部解壓到該資料夾（`winhttp.dll` 要和 `Mortal.exe` 在同一層）。

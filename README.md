@@ -111,11 +111,11 @@
 
 - [活俠傳 wiki](https://smilin.net/LoM-wiki/)（[GitHub：Mr-Smilin/LoM-wiki](https://github.com/Mr-Smilin/LoM-wiki)）：「事件攻略」的路線、分歧條件、結局圖鑑，以及「事件任務」的養成事件名稱，都依 wiki 整理。感謝所有編輯與貢獻者。
 
-## 授權
+## License
 
-- 程式碼：[MIT License](LICENSE)。
-- 「事件攻略」「事件任務」所用的 wiki 衍生資料：依 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant) 使用（來源：活俠傳 wiki 與其貢獻者，[貢獻者名單](https://smilin.net/LoM-wiki/json/contributors.json)），僅限非商業用途，轉散布須維持相同授權。
-- wiki 不保證內容正確；若本專案轉為商業用途、移除標示或影響 wiki 伺服器，wiki 維護者得撤銷授權。
-- 遊戲圖片屬原開發團隊（鳥熊團隊），不在上述授權內，本專案不散布。
+- Source code: [MIT License](LICENSE).
+- Wiki-derived data used by "Event Guide" and "Event Missions": used under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (source: Legend of Mortal Wiki and its contributors, [contributor list](https://smilin.net/LoM-wiki/json/contributors.json)). Non-commercial use only; redistribution must keep the same license.
+- The wiki does not guarantee its content is accurate. The wiki maintainers may revoke the license if this project becomes commercial, drops attribution, or affects the wiki's servers.
+- Game images belong to the original developer (鳥熊團隊) and are not covered by the above; this project does not distribute them.
 
-完整說明見 [NOTICE-wiki-data.md](NOTICE-wiki-data.md)。
+See [NOTICE-wiki-data.md](NOTICE-wiki-data.md) for details.

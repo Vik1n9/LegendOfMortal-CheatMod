@@ -114,15 +114,17 @@ Linux / Steam Deck 請一併清空啟動選項。
   貢獻者名單：https://smilin.net/LoM-wiki/json/contributors.json
 
 
-■ 授權
+■ License
 ----------------------------------------
-・程式碼：MIT License（見 LICENSE.txt）。
-・事件攻略、事件任務所用的 wiki 衍生資料：CC BY-NC-SA 4.0
-  （來源：活俠傳 wiki 與其貢獻者），僅限非商業用途，轉散布須維持相同授權。
-・wiki 不保證內容正確；若轉為商業用途、移除標示或影響 wiki 伺服器，
-  wiki 維護者得撤銷授權。
-・遊戲圖片屬原開發團隊（鳥熊團隊），不在上述授權內。
-・詳見 NOTICE-wiki-data.txt。
+- Source code: MIT License (see LICENSE.txt).
+- Wiki-derived data used by Event Guide and Event Missions: CC BY-NC-SA 4.0
+  (source: Legend of Mortal Wiki and its contributors). Non-commercial use only;
+  redistribution must keep the same license.
+- The wiki does not guarantee its content is accurate. The wiki maintainers may
+  revoke the license if this project becomes commercial, drops attribution, or
+  affects the wiki's servers.
+- Game images belong to the original developer (鳥熊團隊) and are not covered above.
+- See NOTICE-wiki-data.txt for details.
 
 
 ■ 第三方元件

@@ -1,22 +1,25 @@
-# 資料來源與授權聲明（活俠傳 wiki）
+# Data Source and License Notice (Legend of Mortal Wiki)
 
-本專案**程式碼**以 [MIT License](LICENSE) 授權。
+The **source code** of this project is licensed under the [MIT License](LICENSE).
 
-「事件攻略」（路線地圖、分歧條件、結局圖鑑）與「事件任務」（養成事件名稱）的**資料內容**，
-改編自 [活俠傳 wiki](https://smilin.net/LoM-wiki/)（[GitHub：Mr-Smilin/LoM-wiki](https://github.com/Mr-Smilin/LoM-wiki)），
-依 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant) 授權使用。
-此部分資料不適用 MIT，且不得用於商業用途。
+The **data content** used by the "Event Guide" feature (route maps, branch conditions, ending gallery) and the
+"Event Missions" feature (names of cultivation events) is adapted from the
+[Legend of Mortal Wiki (活俠傳 wiki)](https://smilin.net/LoM-wiki/)
+([GitHub: Mr-Smilin/LoM-wiki](https://github.com/Mr-Smilin/LoM-wiki)) and is used under
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+This data is **not** covered by the MIT License and **must not be used commercially**.
 
-## 標示（Attribution）
+## Attribution
 
-- 來源：活俠傳 wiki，Smilin 與活俠傳 wiki 貢獻者
-- 貢獻者名單：<https://smilin.net/LoM-wiki/json/contributors.json>
-- 授權：CC BY-NC-SA 4.0
-- 本專案已對原內容做過整理與改編（轉為遊戲內介面與程式資料結構）。
+- Source: Legend of Mortal Wiki (活俠傳 wiki), by Smilin and the wiki contributors
+- Contributor list: <https://smilin.net/LoM-wiki/json/contributors.json>
+- License: CC BY-NC-SA 4.0
+- Changes: the original content has been reorganized and adapted into in-game UI and program data structures.
 
-## 衍生資料的分享方式（Share-Alike）
+## Share-Alike scope
 
-涵蓋以下檔案的 wiki 衍生資料，轉散布時須維持 CC BY-NC-SA 4.0，並保留本標示：
+Wiki-derived data in the following files must remain under CC BY-NC-SA 4.0 when redistributed, and this
+attribution must be kept:
 
 - `LegendOfMortal_InternalMod/Core/GuideMapData.cs`
 - `LegendOfMortal_InternalMod/Core/GuideRomanceData.cs`
@@ -25,23 +28,27 @@
 - `LegendOfMortal_InternalMod/Core/MissionNames.cs`
 - `LegendOfMortal_InternalMod/Core/TrainingNames.cs`
 
-若日後混用其他來源的資料，須另行標明來源，並將 wiki 衍生資料與其他資料分開標示。
+If data from other sources is mixed in later, those sources will be identified separately and kept distinct
+from the wiki-derived data.
 
-## 免責聲明
+## Disclaimer
 
-wiki 不保證內容的正確性、時效性與完整性，亦不對因使用內容產生的客訴或糾紛負責；
-本專案依其整理，同樣不保證內容正確，亦不提供任何擔保。
+The wiki does not guarantee the accuracy, timeliness, or completeness of its content and is not liable for any
+complaints or disputes arising from its use. This project is based on that content and likewise makes no
+warranty of correctness.
 
-## 授權撤銷條件（wiki 維護者保留之權利）
+## Revocation
 
-若本專案轉為商業用途、移除標示，或影響 wiki 伺服器運作，wiki 維護者得單方面撤銷授權，
-屆時須移除來自 wiki 的資料。本專案維持免費、非商業、無廣告、不接受贊助。
+The wiki maintainers may unilaterally revoke the license, and require that wiki-sourced data be removed, if this
+project becomes commercial, drops attribution, or affects the wiki's servers. This project remains free,
+non-commercial, ad-free, and accepts no sponsorship.
 
-## 遊戲圖片
+## Game images
 
-wiki 所使用的遊戲圖片由原開發團隊（鳥熊團隊）授權 wiki 使用，**不包含在 CC BY-NC-SA 4.0 的授權範圍內**。
-本專案不擷取、不散布 wiki 上的遊戲圖片；如需使用，請直接向原作者取得授權。
+Game images used on the wiki are licensed to the wiki by the original developer (鳥熊團隊, Bird-Bear Team) and are
+**not** covered by CC BY-NC-SA 4.0. This project does not extract or redistribute game images from the wiki.
+Anyone who needs them must obtain permission from the original authors directly.
 
 ---
 
-依據：[Mr-Smilin/LoM-wiki#345](https://github.com/Mr-Smilin/LoM-wiki/issues/345) 維護者回覆。
+Basis: maintainer reply in [Mr-Smilin/LoM-wiki#345](https://github.com/Mr-Smilin/LoM-wiki/issues/345).

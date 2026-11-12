@@ -53,7 +53,7 @@ namespace LegendOfMortal_InternalMod
             // 放上方正中，避開左上角的貢獻度/行動 HUD 與右上角選單
             if (!UI.CheatWindow.Visible && Time.realtimeSinceStartup < 60f)
             {
-                var text = new GUIContent($"內置MOD已載入　按 <b>{ModConfig.MainMenuKey.Value}</b> 打開「唐門密卷」");
+                var text = new GUIContent($"唐門密卷已載入　按 <b>{ModConfig.MainMenuKey.Value}</b> 開關視窗");
                 var size = UI.GameStyleUI.Notice.CalcSize(text);
                 GUI.Label(new Rect((Screen.width - size.x) / 2f, UI.GameStyleUI.Px(16), size.x, size.y), text, UI.GameStyleUI.Notice);
             }

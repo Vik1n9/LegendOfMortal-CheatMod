@@ -1,5 +1,5 @@
 # 《唐門密卷》LegendOfMortal-CheatMod
-《活俠傳》（Legend of Mortal）內置 MOD，目前版本 **v1.3 Beta**。適用 Steam 版 **1.0.6001.0（崆峒神威）** 以上（1.0.6000.x 請使用 MOD v1.0），支援 Windows 與 Linux / Steam Deck。
+《活俠傳》（Legend of Mortal）內置 MOD《唐門密卷》，目前版本 **v1.3.1 Beta**。適用 Steam 版 **1.0.6001.0（崆峒神威）** 以上（1.0.6000.x 請使用 MOD v1.0），支援 Windows 與 Linux / Steam Deck。
 
 > [!WARNING]
 > **第一次玩《活俠傳》請先不要安裝這個 MOD。**
@@ -14,7 +14,7 @@
 
 ## 安裝
 
-1. 到 [v1.3 Beta 發佈頁](../../releases/tag/v1.3beta) 下載 `LegendOfMortal_InternalMod_v1.3beta_full.zip`。
+1. 到 [v1.3.1 Beta 發佈頁](../../releases/tag/v1.3.1beta) 下載 `LegendOfMortal_InternalMod_v1.3.1beta_full.zip`。
    （想用穩定版可到 [最新正式版](../../releases/latest) 下載 v1.2。）
    （已安裝 BepInEx 5 的玩家可改下載 `plugin_only` 版。）
 2. Steam 收藏庫對《活俠傳》按右鍵 → 管理 → 瀏覽本機檔案。
@@ -23,7 +23,7 @@
    ```
    WINEDLLOVERRIDES="winhttp=n,b" %command%
    ```
-5. 從 Steam 啟動遊戲，畫面上方出現「內置MOD已載入」即安裝成功。
+5. 從 Steam 啟動遊戲，畫面上方出現「唐門密卷已載入」即安裝成功。
 
 若遊戲資料夾已有 BepInEx 6，請先刪除 `BepInEx` 資料夾、`winhttp.dll`、`doorstop_config.ini`、`.doorstop_version`、`changelog.txt` 再安裝。
 
@@ -98,6 +98,11 @@
 
 ![屬性銀兩](docs/images/stats.jpg)
 
+## v1.3.1 Beta 更新內容
+
+- 補上 wiki 資料來源的 CC BY-NC-SA 4.0 標示、免責聲明與撤銷條款（見 `NOTICE-wiki-data.txt`），事件攻略與事件任務頁面加註來源。
+- 專案名稱統一為《唐門密卷》。
+
 ## v1.3 Beta 更新內容
 
 - 路線地圖新增九位心上人的結緣線分頁。
@@ -112,12 +117,12 @@
 
 ## 授權
 
-- Source code: [MIT License](LICENSE).
-- Wiki-derived data used by "Event Guide" and "Event Missions": from [LoM-Wiki](https://smilin.net/LoM-wiki/), used under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Team / contributor list: <https://smilin.net/LoM-wiki/json/contributors.json>. Non-commercial use only; redistribution must keep the same license.
-- 本站不保證內容的絕對正確性、即時性與完整性。若因使用本站資料而產生任何客訴或爭議，本站概不負責。
-  (The wiki does not guarantee the accuracy, timeliness, or completeness of its content and is not liable for complaints or disputes arising from its use.)
-- 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自本站之資料全數下架。
-  (The wiki may unilaterally terminate the license and require takedown of wiki-sourced data if this project becomes commercial, fails to attribute, or affects the wiki's servers.)
-- Game images belong to the original developer (原始鳥熊 Obb Studio Inc.) and are not covered by CC BY-NC-SA 4.0; obtain permission from the original authors if needed. This project does not distribute them.
+- 《唐門密卷》原始碼：[MIT License](LICENSE)。
+- 「事件攻略」與「事件任務」使用的 wiki 衍生資料，來自 [活俠傳 wiki（LoM-Wiki）](https://smilin.net/LoM-wiki/)，依 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 授權使用，不適用 MIT。僅限非商業用途，散布時須沿用相同授權。團隊與貢獻者名單：<https://smilin.net/LoM-wiki/json/contributors.json>
+- 本專案免費、非商業、無廣告、不接受贊助。
+- 以下兩項為 wiki 維護者要求的聲明（原文）：
+  - 本站不保證內容的絕對正確性、即時性與完整性。若因使用本站資料而產生任何客訴或爭議，本站概不負責。
+  - 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自本站之資料全數下架。
+- 遊戲圖片屬於原開發團隊「原始鳥熊 Obb Studio Inc.」，不在 CC BY-NC-SA 4.0 授權範圍內，本專案不散布遊戲圖片；如需使用請另向原作者取得授權。
 
-See [NOTICE-wiki-data.md](NOTICE-wiki-data.md) for details.
+詳見 [NOTICE-wiki-data.md](NOTICE-wiki-data.md)。

@@ -1,4 +1,4 @@
-活俠傳 內置MOD v{VERSION}
+《唐門密卷》 v{VERSION}
 ========================================
 
 適用版本：Steam 版《活俠傳》1.0.6001.0（崆峒神威）以上
@@ -60,7 +60,7 @@
 2. 把壓縮檔裡的「所有內容」直接解壓到這個資料夾
    （winhttp.dll 要和 Mortal.exe 放在同一層）。
 3. 正常從 Steam 啟動遊戲。畫面上方出現
-   「內置MOD已載入　按 F1 打開「唐門密卷」」就代表安裝成功。
+   「唐門密卷已載入　按 F1 開關視窗」就代表安裝成功。
 
 如果你已經裝過 BepInEx 5，可以改用 plugin_only 版，
 只要把 BepInEx\plugins\LegendOfMortal_InternalMod 資料夾放進去即可。
@@ -114,21 +114,23 @@ Linux / Steam Deck 請一併清空啟動選項。
   貢獻者名單：https://smilin.net/LoM-wiki/json/contributors.json
 
 
-■ License
+■ 授權
 ----------------------------------------
-- Source code: MIT License (see LICENSE.txt).
-- Wiki-derived data used by Event Guide and Event Missions: from LoM-Wiki
-  (https://smilin.net/LoM-wiki/), used under CC BY-NC-SA 4.0.
-  Team / contributor list: https://smilin.net/LoM-wiki/json/contributors.json
-  Non-commercial use only; redistribution must keep the same license.
-- 本站不保證內容的絕對正確性、即時性與完整性。若因使用本站資料而產生任何客訴或爭議，
-  本站概不負責。
-- 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），
-  本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自
-  本站之資料全數下架。
-- Game images belong to the original developer (原始鳥熊 Obb Studio Inc.) and are not covered by
-  CC BY-NC-SA 4.0; obtain permission from the original authors if needed.
-- See NOTICE-wiki-data.txt for details.
+- 《唐門密卷》原始碼：MIT License（見 LICENSE.txt）。
+- 「事件攻略」與「事件任務」使用的 wiki 衍生資料，來自活俠傳 wiki（LoM-Wiki，
+  https://smilin.net/LoM-wiki/），依 CC BY-NC-SA 4.0 授權使用，不適用 MIT。
+  團隊與貢獻者名單：https://smilin.net/LoM-wiki/json/contributors.json
+  僅限非商業用途，散布時須沿用相同授權。
+- 本專案免費、非商業、無廣告、不接受贊助。
+- 以下兩項為 wiki 維護者要求的聲明（原文）：
+  1. 本站不保證內容的絕對正確性、即時性與完整性。若因使用本站資料而產生任何客訴或爭議，
+     本站概不負責。
+  2. 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），
+     本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自
+     本站之資料全數下架。
+- 遊戲圖片屬於原開發團隊「原始鳥熊 Obb Studio Inc.」，不在 CC BY-NC-SA 4.0 授權範圍內，
+  本專案不散布遊戲圖片；如需使用請另向原作者取得授權。
+- 詳見 NOTICE-wiki-data.txt。
 
 
 ■ 第三方元件

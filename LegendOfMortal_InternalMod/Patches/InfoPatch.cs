@@ -214,7 +214,7 @@ namespace LegendOfMortal_InternalMod.Patches
         {
             string text = Regex.Replace(message, @"^\s*$\n|\r", string.Empty, RegexOptions.Multiline).Trim();
             if (text.Length == 0) return;
-            StoryLogData.AddText("<size=18>【內置MOD】" + text + "</size>", false);
+            StoryLogData.AddText("<size=18>【唐門密卷】" + text + "</size>", false);
         }
     }
 }

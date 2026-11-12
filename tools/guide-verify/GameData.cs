@@ -17,6 +17,8 @@ namespace GuideVerify
         public sealed class Flag
         {
             public int Default;
+            /// <summary>名稱出現在遊戲程式碼（例：戰鬥結果 C00000），可能由程式寫入任何值。</summary>
+            public bool Code;
             /// <summary>開發備註裡列出的值（只有數字），例如 "1:青城 2:崆峒" → { 1, 2 }。</summary>
             public readonly HashSet<int> Values = new();
         }
@@ -33,7 +35,31 @@ namespace GuideVerify
             public List<string> NextScripts = new();
             public List<string> Refs = new();
             public List<KeyValuePair<string, int>> SetFlags = new();
+            /// <summary>用 AddFlag 累加的旗標：值無法靜態列舉。</summary>
+            public List<string> AddFlags = new();
             public List<EndingOpen> Opens = new();
+        }
+
+        /// <summary>比較式的一邊：旗標、常數，或其他數值（屬性、好感、心上人等，一律視為可能成立）。</summary>
+        public sealed class SwitchValue
+        {
+            public string Flag;
+            public int? Const;
+            public string Other;
+            public string Text => Flag ?? Const?.ToString() ?? Other ?? "?";
+        }
+
+        public sealed class SwitchBranch
+        {
+            public bool Or;
+            public List<(SwitchValue Left, int Op, SwitchValue Right)> Items = new();
+        }
+
+        /// <summary>劇情檢查點（checkpointmanager.Switch）：回傳第一個成立的分支編號，全部不成立回傳分支數＋1。</summary>
+        public sealed class Switch
+        {
+            public bool UseCount;
+            public List<SwitchBranch> Branches = new();
         }
 
         /// <summary>某個腳本裡開啟某結局的位置，Guards 是包住它的分支條件。</summary>
@@ -64,6 +90,10 @@ namespace GuideVerify
         public static HashSet<string> MissionStarts = new();
         /// <summary>旗標 → 有哪些值曾被任何腳本／任務寫入（用來判斷分支條件是否可能成立）。</summary>
         public static Dictionary<string, HashSet<int>> FlagSetters = new();
+        /// <summary>有劇本用 AddFlag 改動的旗標，值可能是任何數。</summary>
+        public static HashSet<string> FlagAnyValue = new();
+        /// <summary>劇情檢查點名稱 → 條件（同名可能有多份）；沒有 switches.json 時為空，檢查點條件一律視為可能成立。</summary>
+        public static Dictionary<string, List<Switch>> Switches = new();
         /// <summary>任務檢查點的時間（旬序 → 代表名稱），用來做攻略收錄率統計。</summary>
         public static Dictionary<int, string> MissionTimes = new();
 
@@ -91,13 +121,15 @@ namespace GuideVerify
             var endingsFile = Path.Combine(dir, "endings.json");
             var scriptsFile = Path.Combine(dir, "scripts.json");
             var missionsFile = Path.Combine(dir, "missions.json");
+            var switchesFile = Path.Combine(dir, "switches.json");
             if (!File.Exists(flagsFile) || !File.Exists(endingsFile) || !File.Exists(scriptsFile))
                 return false;
 
             using (var doc = JsonDocument.Parse(File.ReadAllText(flagsFile)))
                 foreach (var p in doc.RootElement.EnumerateObject())
                 {
-                    var f = new Flag { Default = p.Value.GetProperty("default").GetInt32() };
+                    var f = new Flag { Default = p.Value.GetProperty("default").GetInt32(),
+                                       Code = p.Value.TryGetProperty("code", out var code) && code.GetBoolean() };
                     foreach (var v in p.Value.GetProperty("values").EnumerateArray()) f.Values.Add(v.GetInt32());
                     Flags[p.Name] = f;
                 }
@@ -117,6 +149,8 @@ namespace GuideVerify
                     foreach (var f in p.Value.GetProperty("setFlags").EnumerateArray())
                         s.SetFlags.Add(new KeyValuePair<string, int>(
                             f.GetProperty("flag").GetString(), f.GetProperty("value").GetInt32()));
+                    if (p.Value.TryGetProperty("addFlags", out var adds))
+                        foreach (var x in adds.EnumerateArray()) s.AddFlags.Add(x.GetString());
                     if (p.Value.TryGetProperty("endingOpens", out var opens))
                         foreach (var o in opens.EnumerateArray())
                         {
@@ -135,11 +169,34 @@ namespace GuideVerify
                 }
 
             foreach (var sc in Scripts.Values)
+            {
                 foreach (var p in sc.SetFlags)
                 {
                     if (!FlagSetters.TryGetValue(p.Key, out var vs)) FlagSetters[p.Key] = vs = new HashSet<int>();
                     vs.Add(p.Value);
                 }
+                FlagAnyValue.UnionWith(sc.AddFlags);
+            }
+
+            if (File.Exists(switchesFile))
+                using (var doc = JsonDocument.Parse(File.ReadAllText(switchesFile)))
+                    foreach (var p in doc.RootElement.EnumerateObject())
+                    {
+                        var list = new List<Switch>();
+                        foreach (var sw in p.Value.EnumerateArray())
+                        {
+                            var x = new Switch { UseCount = sw.GetProperty("useCount").GetBoolean() };
+                            foreach (var b in sw.GetProperty("branches").EnumerateArray())
+                            {
+                                var br = new SwitchBranch { Or = b.GetProperty("or").GetBoolean() };
+                                foreach (var it in b.GetProperty("items").EnumerateArray())
+                                    br.Items.Add((ReadValue(it[0]), it[1].GetInt32(), ReadValue(it[2])));
+                                x.Branches.Add(br);
+                            }
+                            list.Add(x);
+                        }
+                        Switches[p.Name] = list;
+                    }
 
             if (File.Exists(missionsFile))
                 using (var doc = JsonDocument.Parse(File.ReadAllText(missionsFile)))
@@ -159,6 +216,13 @@ namespace GuideVerify
                                 }
                         }
             return true;
+        }
+
+        private static SwitchValue ReadValue(JsonElement e)
+        {
+            if (e.TryGetProperty("flag", out var f)) return new SwitchValue { Flag = f.GetString() };
+            if (e.TryGetProperty("const", out var c)) return new SwitchValue { Const = c.GetInt32() };
+            return new SwitchValue { Other = e.TryGetProperty("other", out var o) ? o.GetString() : "?" };
         }
 
         public static void Run()
@@ -264,11 +328,85 @@ namespace GuideVerify
             return openedBy;
         }
 
-        /// <summary>分支條件的旗標值是否真的有人寫入（例：E12000=1 要有劇本設定過）。</summary>
+        /// <summary>
+        /// 旗標可能出現的值：預設值＋任何劇本 SetFlag 寫入的值。
+        /// 用 AddFlag 累加、或由遊戲程式碼寫入的旗標回傳 null（任何值都可能）。
+        /// </summary>
+        private static HashSet<int> PossibleValues(string flag)
+        {
+            if (FlagAnyValue.Contains(flag) || (Flags.TryGetValue(flag, out var cf) && cf.Code)) return null;
+            var vs = new HashSet<int>();
+            if (Flags.TryGetValue(flag, out var f)) vs.Add(f.Default);
+            if (FlagSetters.TryGetValue(flag, out var set)) vs.UnionWith(set);
+            return vs;
+        }
+
+        private static bool Compare(int a, int op, int b) => op switch
+        {
+            0 => a == b, 1 => a != b, 2 => a < b, 3 => a <= b, 4 => a > b, 5 => a >= b, _ => true,
+        };
+
+        /// <summary>「旗標 比較 常數」看旗標的可能值有沒有一個符合；其他組合（屬性、好感、兩個旗標互比）無法靜態判斷，視為可能。</summary>
+        private static bool ItemPossible((SwitchValue Left, int Op, SwitchValue Right) it)
+        {
+            var (l, op, r) = it;
+            if (l.Flag != null && r.Const is int c)
+                return PossibleValues(l.Flag) is not { } vs || vs.Any(v => Compare(v, op, c));
+            if (r.Flag != null && l.Const is int c2)
+                return PossibleValues(r.Flag) is not { } vs2 || vs2.Any(v => Compare(c2, op, v));
+            if (l.Const is int a && r.Const is int b) return Compare(a, op, b);
+            return true;
+        }
+
+        private static bool BranchPossible(SwitchBranch b) =>
+            b.Items.Count == 0 || (b.Or ? b.Items.Any(ItemPossible) : b.Items.All(ItemPossible));
+
+        /// <summary>
+        /// 劇情檢查點走到第 value 個分支的可能性。只檢查該分支本身能否成立（不要求前面的分支都不成立），
+        /// 寧可放過也不誤殺；「分支數＋1」是全部不成立時的預設分支，一律視為可能。
+        /// </summary>
+        private static bool CheckpointPossible(string key, int value)
+        {
+            if (!Switches.TryGetValue(key, out var list)) return true;   // 不是 Switch（例：玩家選項）或沒有資料
+            return list.Any(sw =>
+            {
+                if (sw.UseCount) return true;
+                int n = sw.Branches.Count;
+                if (value == n + 1) return true;
+                if (value < 1 || value > n + 1) return false;
+                return BranchPossible(sw.Branches[value - 1]);
+            });
+        }
+
+        /// <summary>結局開啟點的分支條件是否可能同時成立：旗標條件要有人寫得出該值，劇情檢查點的分支條件要可能成立。</summary>
         private static bool Satisfiable(EndingOpen o) =>
-            o.Guards.Where(g => g.Kind == "flag")
-                    .All(g => (FlagSetters.TryGetValue(g.Key, out var vs) && vs.Contains(g.Value))
-                           || (Flags.TryGetValue(g.Key, out var f) && f.Default == g.Value));
+            o.Guards.All(g => g.Kind switch
+            {
+                "flag" => PossibleValues(g.Key) is not { } vs || vs.Contains(g.Value),
+                "checkpoint" => CheckpointPossible(g.Key, g.Value),
+                _ => true,
+            });
+
+        /// <summary>說明檢查點分支的條件，例：Ch_8_6_3_2_001 分支3（G11001 ＝ 1）。</summary>
+        private static string CheckpointText(string key, int value)
+        {
+            if (!Switches.TryGetValue(key, out var list) || list[0].UseCount) return null;
+            var br = list[0].Branches;
+            if (value < 1 || value > br.Count) return null;
+            string[] ops = { "＝", "≠", "<", "≦", ">", "≧" };
+            return string.Join(br[value - 1].Or ? " 或 " : " 且 ",
+                br[value - 1].Items.Select(i => $"{i.Left.Text} {(i.Op is >= 0 and < 6 ? ops[i.Op] : "?")} {i.Right.Text}"));
+        }
+
+        /// <summary>列出開啟點裡不可能成立的檢查點條件，方便人工核對。</summary>
+        private static string WhyNot(IEnumerable<EndingOpen> opens)
+        {
+            var why = opens.SelectMany(o => o.Guards)
+                           .Where(g => g.Kind == "checkpoint" && !CheckpointPossible(g.Key, g.Value))
+                           .Select(g => CheckpointText(g.Key, g.Value) is { } t ? $"{g.Key} 分支{g.Value}：{t}" : null)
+                           .Where(t => t != null).Distinct().Take(2).ToList();
+            return why.Count == 0 ? "" : "；不可能成立：" + string.Join("；", why);
+        }
 
         private static string Describe(IEnumerable<EndingOpen> opens) =>
             string.Join("；", opens.Take(2).Select(o => $"{o.Script}（{o.Text}）"));
@@ -296,7 +434,7 @@ namespace GuideVerify
                 else if (!e.Unavailable && !isLive)
                     Warn($"結局{e.No}「{e.Name}」標為可達成，但開啟點的條件不可能成立（{Describe(mine)}）");
                 else if (e.Unavailable && any && !isLive)
-                    Console.WriteLine($"  結局{e.No}「{e.Name}」：腳本存在但分支條件不可達（{Describe(mine)}）→ 與標記一致");
+                    Console.WriteLine($"  結局{e.No}「{e.Name}」：腳本存在但分支條件不可達（{Describe(mine)}{WhyNot(mine)}）→ 與標記一致");
             }
             Console.WriteLine($"結局腳本：{live}/66 的開啟條件可成立；{unreachable} 個只出現在走不到的腳本（僅供參考）");
         }

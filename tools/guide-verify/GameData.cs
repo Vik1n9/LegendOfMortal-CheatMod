@@ -306,7 +306,9 @@ namespace GuideVerify
         {
             if (reachableScripts != null) return reachableScripts;
             var seen = new HashSet<string>();
-            var q = new Queue<string>(MissionStarts);
+            // 起點：任務檢查點的起始劇本，加上角色對話選單（talk_girl5 等）。
+            // 對話選單由遊戲程式在與角色交談時直接開啟，不經過任務，例：結局23 的入口 talk_girl5 → talk_girl5_02。
+            var q = new Queue<string>(MissionStarts.Concat(Scripts.Keys.Where(IsTalkMenu)));
             while (q.Count > 0)
             {
                 var s = q.Dequeue();
@@ -319,6 +321,9 @@ namespace GuideVerify
             }
             return reachableScripts = seen;
         }
+
+        private static bool IsTalkMenu(string name) =>
+            System.Text.RegularExpressions.Regex.IsMatch(name, @"^talk_[A-Za-z]+\d+$");
 
         private static Dictionary<int, List<string>> openedBy;
         private static Dictionary<int, List<string>> OpenedBy()

@@ -775,7 +775,7 @@ namespace LegendOfMortal_InternalMod.Core
             Intro = "崆峒留學進奪魄門並拜夏侯蘭為師，第三年建造樹屋、雪山行，最後在雪山之約抵抗傳功並打贏她。",
             Sections = new[]
             {
-                new MapSection { Row = 0, Title = "第二年　崆峒留學・拜師", Lanes = new[] { "", "", "結緣必要", "", "崆峒季試" } },
+                new MapSection { Row = 0, Title = "第二年　崆峒留學・拜師", Lanes = new[] { "師父找媳婦", "", "結緣必要", "", "崆峒季試" } },
                 new MapSection { Row = 4, Title = "第三年五月～七月　雪山行", Lanes = 必要 },
                 new MapSection { Row = 7, Title = "第三年八月起　結緣之後", Lanes = new[] { "", "", "結緣之後", "", "邀請・西武林盟" } },
             },
@@ -812,7 +812,20 @@ namespace LegendOfMortal_InternalMod.Core
                     Start = T(2, 4, 1), End = T(2, 7, 3), Where = "拜師後到崆峒留學結束",
                     Reqs = Rq(Rel(R.夏侯蘭, Op.Ge, 40), NoFlag("E21001", "樊嘯天未拜師夏侯蘭")),
                     Note = "增加好感的主要方式，盡量在留學結束前好感≥40。練功支線若讓樊嘯天拜師夏侯蘭，會影響後面劇情與結局演出，初次走這條線不建議。",
-                    Next = To("蘭_季試", "蘭_樹屋"),
+                    Next = To("蘭_季試", "蘭_樹屋", "蘭_媳婦"),
+                },
+                new MapNode
+                {
+                    Id = "蘭_媳婦", Title = "師父找媳婦", Kind = NodeKind.Branch, Lane = 0, Row = 3, Route = 崆峒,
+                    Start = T(2, 4, 1), End = T(2, 7, 3), Where = "奪魄森林修練被說分心時選「因為師父好看」，之後與夏侯蘭交談",
+                    Reqs = Rq(Flag("Talk_Girl_05_02_001", "曾回答「因為師父好看」"), Rel(R.夏侯蘭, Op.Lt, 35)),
+                    Note = "交談時夏侯蘭好感≥35 不會進入找媳婦；與結緣線（好感≥40）方向相反，兩者不能兼得。性情≤40 時會看出村姑被綁來而不滿又害怕。",
+                    Options = new[]
+                    {
+                        O("「要找漂亮的喔」→ 天運擲到 <33「被惡霸強搶的村姑」", "魏菊好感≥30 → 汗青書23《宦海浮沉》。",
+                          To("E23"), Rq(Rel(R.魏菊, Op.Ge, 30))),
+                        O("「我不要啦！」，或擲到孤兒（<66）／貪官女兒（≥66）", "不會進入汗青書23。"),
+                    },
                 },
                 new MapNode
                 {

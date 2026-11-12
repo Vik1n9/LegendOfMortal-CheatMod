@@ -37,6 +37,10 @@ namespace GuideVerify
             public List<KeyValuePair<string, int>> SetFlags = new();
             /// <summary>用 AddFlag 累加的旗標：值無法靜態列舉。</summary>
             public List<string> AddFlags = new();
+            /// <summary>被不存在的 Condition 停用的選項（例：talk[4]:XXX）；其分支內容在抽取時已挖空。</summary>
+            public List<string> DeadOptions = new();
+            /// <summary>停用分支原本會接到的劇本（抽取時已從 NextScripts／Refs 移除，這裡只用來說明原因）。</summary>
+            public HashSet<string> DeadTargets = new();
             public List<EndingOpen> Opens = new();
         }
 
@@ -151,6 +155,10 @@ namespace GuideVerify
                             f.GetProperty("flag").GetString(), f.GetProperty("value").GetInt32()));
                     if (p.Value.TryGetProperty("addFlags", out var adds))
                         foreach (var x in adds.EnumerateArray()) s.AddFlags.Add(x.GetString());
+                    if (p.Value.TryGetProperty("deadOptions", out var deadOpts))
+                        foreach (var x in deadOpts.EnumerateArray()) s.DeadOptions.Add(x.GetString());
+                    if (p.Value.TryGetProperty("deadTargets", out var deadTo))
+                        foreach (var x in deadTo.EnumerateArray()) s.DeadTargets.Add(x.GetString());
                     if (p.Value.TryGetProperty("endingOpens", out var opens))
                         foreach (var o in opens.EnumerateArray())
                         {
@@ -398,6 +406,16 @@ namespace GuideVerify
                 br[value - 1].Items.Select(i => $"{i.Left.Text} {(i.Op is >= 0 and < 6 ? ops[i.Op] : "?")} {i.Right.Text}"));
         }
 
+        /// <summary>開啟結局的劇本若是被停用選項切斷，列出上游劇本裡被停用的選項（例：talk[4]:XXX）。</summary>
+        private static string DeadHint(IEnumerable<EndingOpen> opens)
+        {
+            var targets = opens.Select(o => o.Script).ToHashSet();
+            var hints = Scripts.Where(p => p.Value.DeadOptions.Count > 0 && p.Value.DeadTargets.Overlaps(targets))
+                               .Select(p => $"{p.Key} 的 {string.Join("、", p.Value.DeadOptions)}")
+                               .Take(2).ToList();
+            return hints.Count == 0 ? "" : "；入口選項被停用：" + string.Join("；", hints);
+        }
+
         /// <summary>列出開啟點裡不可能成立的檢查點條件，方便人工核對。</summary>
         private static string WhyNot(IEnumerable<EndingOpen> opens)
         {
@@ -426,9 +444,14 @@ namespace GuideVerify
                 if (isLive) live++;
                 if (any && !mine.Any(o => reach.Contains(o.Script))) unreachable++;
 
-                if (e.Unavailable && isLive)
-                    Warn($"結局{e.No}「{e.Name}」標為目前無法達成，但 {Describe(viable)} 會開啟它"
-                         + (reach.Contains(viable[0].Script) ? "（且該劇本可從任務走到）" : ""));
+                // 標為無法達成的結局，要「條件可能成立」且「開啟它的劇本可從任務走到」才算反證；
+                // 劇本走不到（例：唯一入口是被不存在的 Condition 停用的選項）就與標記一致。
+                // 標為可達成的結局不要求走得到：角色對話等由遊戲程式觸發的劇本不在任務圖裡（例：結局23）。
+                var reachable = viable.Where(o => reach.Contains(o.Script)).ToList();
+                if (e.Unavailable && reachable.Count > 0)
+                    Warn($"結局{e.No}「{e.Name}」標為目前無法達成，但 {Describe(reachable)} 會開啟它（且該劇本可從任務走到）");
+                else if (e.Unavailable && isLive)
+                    Console.WriteLine($"  結局{e.No}「{e.Name}」：開啟它的劇本從任務走不到（{Describe(viable)}{DeadHint(viable)}）→ 與標記一致");
                 else if (!e.Unavailable && !any)
                     Warn($"結局{e.No}「{e.Name}」標為可達成，但沒有任何腳本開啟");
                 else if (!e.Unavailable && !isLive)

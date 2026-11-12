@@ -42,6 +42,8 @@ python3 -m venv .venv
 - 條件：`MissionCheckData.Check()` 對所有 `ConditionResultItem` 取 AND；每個 `ConditionResultItem` 內依 `LogicOperatorType`（AND／OR）合併 `StatCompareItem`。
 - 比較：`_compareOp` 0=＝、1=≠、2=<、3=≦、4=>、5=≧。
 - 劇情檢查點：`SwitchResultData.Execute()` 依序檢查分支，回傳第一個成立的編號（從 1 起）；全部不成立回傳「分支數＋1」。
+- 選項條件：`checkpointmanager.Condition(名稱)` 找不到同名 `ConditionResultData` 時回傳 false。劇本用不存在的名稱（`XXX`、`xxx`、`…_TEMP` 等）停用選項；
+  抽取時會把這些選項的分支挖空（裡面的結局、旗標、劇本互指都不算），並在 `scripts.json` 記下 `deadOptions`（例：`talk[4]:XXX`）與原本會接到的劇本 `deadTargets`。
 - 變數：`StatGroupVariable` 由多個 `StatValueReference` 依 `_groupType`（合計／最大／最小／相乘／全部／任一）組合；
   來源類型 `_checkType`：0 常數、1 角色數值、2 好感度、3 旗標、4 書籍、5 雜物、6 貴重品、7 隨機值、8 數值群組、9 遊戲時間、10 技能、11 秘笈等級、12 已開發項目、13 開發項目等級、14 書籍精通、15 風雲史、16 條件設定。
 

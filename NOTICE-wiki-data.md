@@ -54,11 +54,12 @@ wiki-derived data will be classified and labeled separately.
 
 ## Game images
 
-> 本wiki中所使用之遊戲圖片，皆由原始鳥熊團隊授權於本wiki使用，並不包含在 CC BY-NC-SA 4.0 共享/改編之授權，這部份如有需要請另外跟作者取得授權。
+wiki 上的遊戲圖片是由原開發團隊「原始鳥熊 Obb Studio Inc.」授權給 wiki 使用的，不屬於 CC BY-NC-SA 4.0 的共享與改編授權範圍。
+如需使用這些圖片，請另行向原作者取得授權。本專案不擷取、也不散布 wiki 上的遊戲圖片。
 
-Game images used on the wiki are licensed to the wiki by the original developer (鳥熊團隊) and are **not**
-covered by the CC BY-NC-SA 4.0 sharing/adaptation license. Anyone who needs them must obtain permission from the
-original authors separately. This project does not extract or redistribute game images from the wiki.
+The game images on the wiki were licensed to the wiki by the original developer (原始鳥熊 Obb Studio Inc.) and are
+**not** covered by the CC BY-NC-SA 4.0 sharing/adaptation license. Anyone who needs them must obtain permission from
+the original authors separately. This project does not extract or redistribute game images from the wiki.
 
 ---
 

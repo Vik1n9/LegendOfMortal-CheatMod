@@ -111,7 +111,7 @@
 
 - [活俠傳 wiki](https://smilin.net/LoM-wiki/)（[GitHub：Mr-Smilin/LoM-wiki](https://github.com/Mr-Smilin/LoM-wiki)）：「事件攻略」的路線、分歧條件、結局圖鑑，以及「事件任務」的養成事件名稱，都依 wiki 整理。感謝所有編輯與貢獻者。
 
-## License
+## 授權
 
 - Source code: [MIT License](LICENSE).
 - Wiki-derived data used by "Event Guide" and "Event Missions": from [LoM-Wiki](https://smilin.net/LoM-wiki/), used under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Team / contributor list: <https://smilin.net/LoM-wiki/json/contributors.json>. Non-commercial use only; redistribution must keep the same license.
@@ -119,6 +119,6 @@
   (The wiki does not guarantee the accuracy, timeliness, or completeness of its content and is not liable for complaints or disputes arising from its use.)
 - 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自本站之資料全數下架。
   (The wiki may unilaterally terminate the license and require takedown of wiki-sourced data if this project becomes commercial, fails to attribute, or affects the wiki's servers.)
-- Game images belong to the original developer (鳥熊團隊) and are not covered by CC BY-NC-SA 4.0; obtain permission from the original authors if needed. This project does not distribute them.
+- Game images belong to the original developer (原始鳥熊 Obb Studio Inc.) and are not covered by CC BY-NC-SA 4.0; obtain permission from the original authors if needed. This project does not distribute them.
 
 See [NOTICE-wiki-data.md](NOTICE-wiki-data.md) for details.

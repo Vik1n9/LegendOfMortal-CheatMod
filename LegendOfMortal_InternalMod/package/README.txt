@@ -126,7 +126,7 @@ Linux / Steam Deck 請一併清空啟動選項。
 - 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），
   本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自
   本站之資料全數下架。
-- Game images belong to the original developer (鳥熊團隊) and are not covered by
+- Game images belong to the original developer (原始鳥熊 Obb Studio Inc.) and are not covered by
   CC BY-NC-SA 4.0; obtain permission from the original authors if needed.
 - See NOTICE-wiki-data.txt for details.
 

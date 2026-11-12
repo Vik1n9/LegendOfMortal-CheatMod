@@ -20,7 +20,7 @@ namespace LegendOfMortal_InternalMod.UI
     {
         public static Color Paper, PaperDark, Ink, InkSoft, Vermilion, Frame;
         public static GUISkin Skin = new GUISkin();
-        public static GUIStyle Label = new(), Desc = new(), Entry = new(), Row = new(), RowDesc = new(), Tab = new();
+        public static GUIStyle Label = new(), Desc = new(), Entry = new(), Row = new(), RowDesc = new(), Tab = new(), TabOk = new(), Close = new();
         public static int Px(float v) => (int)v;
     }
 }
@@ -28,37 +28,52 @@ namespace UnityEngine
 {
     public struct Color { public float r, g, b, a; public Color(float r, float g, float b, float a = 1) { this.r = r; this.g = g; this.b = b; this.a = a; }
         public static Color white = new Color(1,1,1,1); public static Color Lerp(Color a, Color b, float t) => a; }
-    public struct Vector2 { public float x, y; }
+    public struct Vector2 { public float x, y; public static Vector2 zero = default; }
     public struct Rect { public float x, y, width, height; public Rect(float x, float y, float w, float h) { this.x = x; this.y = y; width = w; height = h; }
-        public float yMax => y + height; public float xMax => x + width; public Vector2 center => new Vector2 { x = x + width / 2, y = y + height / 2 }; }
-    public class RectOffset { public RectOffset(int a, int b, int c, int d) { } }
+        public float yMax => y + height; public float xMax => x + width; public Vector2 center => new Vector2 { x = x + width / 2, y = y + height / 2 };
+        public bool Contains(Vector2 p) => p.x >= x && p.x < xMax && p.y >= y && p.y < yMax; }
+    public class RectOffset { public RectOffset() { } public RectOffset(int a, int b, int c, int d) { } public int horizontal, vertical; }
     public enum TextAnchor { MiddleCenter, MiddleLeft }
     public enum FontStyle { Normal, Bold }
     public enum TextClipping { Overflow, Clip }
     public class GUIStyleState { public Color textColor; }
     public class GUIStyle { public GUIStyle() { } public GUIStyle(GUIStyle o) { } public static GUIStyle none = new();
-        public int fontSize; public TextAnchor alignment; public bool wordWrap, richText; public TextClipping clipping; public FontStyle fontStyle; public RectOffset padding, margin; public GUIStyleState normal = new(); }
-    public class GUISkin { public GUIStyle box = new(); }
+        public int fontSize; public TextAnchor alignment; public bool wordWrap, richText; public TextClipping clipping; public FontStyle fontStyle; public RectOffset padding = new(), margin = new(); public float fixedWidth, fixedHeight; public GUIStyleState normal = new(); }
+    public class GUISkin { public GUIStyle box = new(), button = new(), window = new(), verticalScrollbar = new(); }
     public class GUIContent { public static GUIContent none = new(); public GUIContent() { } public GUIContent(string s) { } }
     public class GUILayoutOption { }
-    public enum EventType { Layout, Repaint, MouseDown }
-    public class Event { public static Event current = new(); public EventType type; }
+    public enum EventType { Layout, Repaint, MouseDown, KeyDown }
+    public enum KeyCode { None, Escape }
+    public class Event { public static Event current = new(); public EventType type; public KeyCode keyCode; public Vector2 mousePosition; public void Use() { } }
+    public static class Screen { public static int width = 1920, height = 1080; }
+    public static class Time { public static float unscaledTime, realtimeSinceStartup; }
     public class Texture2D { public static Texture2D whiteTexture = new(); }
     public static class Mathf { public static float Max(float a, float b) => Math.Max(a, b); public static float Min(float a, float b) => Math.Min(a, b); public static float Abs(float a) => Math.Abs(a);
         public static int Max(int a, int b) => Math.Max(a, b); public static int Min(int a, int b) => Math.Min(a, b); public static int FloorToInt(float f) => (int)Math.Floor(f); }
     public static class GUI { public static Color color; public static GUISkin skin = new();
         public static void DrawTexture(Rect r, Texture2D t) { }
         public static void Label(Rect r, string s, GUIStyle st) { }
-        public static bool Button(Rect r, GUIContent c, GUIStyle s) => false; }
+        public static bool Button(Rect r, GUIContent c, GUIStyle s) => false;
+        public static bool Button(Rect r, string s, GUIStyle st) => false;
+        public delegate void WindowFunction(int id);
+        public static Rect Window(int id, Rect r, WindowFunction f, string title) => r; }
     public static class GUILayout {
         public static void Label(string s, GUIStyle st, params GUILayoutOption[] o) { }
+        public static void Label(string s, params GUILayoutOption[] o) { }
+        public static void Label(GUIContent c, params GUILayoutOption[] o) { }
+        public static bool Toggle(bool v, string s, GUIStyle st, params GUILayoutOption[] o) => v;
+        public static Vector2 BeginScrollView(Vector2 p, bool h, bool v, GUIStyle hs, GUIStyle vs, params GUILayoutOption[] o) => p;
+        public static void EndScrollView() { }
+        public static void BeginVertical(params GUILayoutOption[] o) { }
+        public static GUILayoutOption ExpandHeight(bool b) => null;
         public static bool Button(string s, params GUILayoutOption[] o) => false;
         public static void BeginHorizontal() { } public static void EndHorizontal() { }
-        public static void BeginVertical() { } public static void BeginVertical(GUIStyle s) { } public static void EndVertical() { }
+        public static void BeginVertical(GUIStyle s) { } public static void EndVertical() { }
         public static void FlexibleSpace() { } public static void Space(float f) { }
         public static GUILayoutOption Width(float w) => null; public static GUILayoutOption ExpandWidth(bool b) => null;
         public static int Toolbar(int i, string[] s, params GUILayoutOption[] o) => i;
         public static int Toolbar(int i, string[] s, GUIStyle st, params GUILayoutOption[] o) => i;
         public static Rect GetRectDummy() => default; }
-    public static class GUILayoutUtility { public static Rect GetRect(float w, float h, params GUILayoutOption[] o) => new Rect(0, 0, 740, h); }
+    public static class GUILayoutUtility { public static Rect GetRect(float w, float h, params GUILayoutOption[] o) => new Rect(0, 0, 740, h);
+        public static Rect GetRect(GUIContent c, GUIStyle s, params GUILayoutOption[] o) => new Rect(0, 0, 100, 30); }
 }

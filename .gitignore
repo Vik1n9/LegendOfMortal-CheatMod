@@ -27,3 +27,8 @@ tools/game-extract/__pycache__/
 tools/game-extract/.venv/
 # 抽出的遊戲資料（版權），不可提交
 tools/game-extract/out/
+# text-search：劇本原文、TypeSafe 回應快取與金鑰，不可提交
+tools/text-search/out/
+tools/text-search/.cache/
+tools/text-search/.env
+tools/text-search/__pycache__/

@@ -3,18 +3,20 @@
 從本機安裝的《活俠傳》抽出「事件判定」資料。
 
 用途：把遊戲內的 MissionData / MissionCheckData / FlagData / LibraryItemData
-（存於 Mortal_Data/globalgamemanagers.assets）與 Lua 劇本
-（存於 Mortal_Data/resources.assets）轉成 JSON，供 tools/guide-verify 比對攻略內容。
+（存於 Mortal_Data/globalgamemanagers.assets）、劇情檢查點 SwitchResultData
+（存於 Mortal_Data/sharedassets*.assets）與 Lua 劇本（存於 Mortal_Data/resources.assets）
+轉成 JSON，供 tools/guide-verify 比對攻略內容。
 
 用法：
     pip install UnityPy TypeTreeGeneratorAPI
     python tools/game-extract/extract.py "/path/to/LegendOfMortal" -o tools/game-extract/out
 
 產出（只留驗證需要的最低資料：名稱、編號、旗標值，不含劇本內文與說明文字）：
-    out/flags.json     旗標編號 → 預設值、開發備註列出的值（只留數字）
+    out/flags.json     旗標編號 → 預設值、開發備註列出的值（只留數字）、是否出現在遊戲程式碼（code）
     out/missions.json  任務名稱 → 檢查點編號、時間、起始劇本名稱
     out/endings.json   汗青書編號與中文名稱（LibraryItemData 20000~20065）
-    out/scripts.json   劇本名稱 → 開啟的結局、寫入的旗標、互指的劇本名稱、結局開啟點的旗標條件
+    out/scripts.json   劇本名稱 → 開啟的結局、寫入／累加的旗標、互指的劇本名稱、結局開啟點的旗標條件
+    out/switches.json  劇情檢查點（checkpointmanager.Switch）名稱 → 各分支條件（旗標／常數比較）
 """
 import argparse, json, os, re, sys
 from collections import defaultdict
@@ -66,6 +68,11 @@ def main():
         if d:
             flags[d.m_Name] = {"default": d._default, "values": note_values(d._devNote)}
 
+    # 戰鬥結果等旗標由遊戲程式（C#）直接寫入，不經過 Lua；名稱若出現在 Managed/*.dll 的字串常數裡，
+    # 就標成 code，驗證時視為「任何值都可能」，避免把這類分支誤判成走不到
+    for name in code_flags(data, flags):
+        flags[name]["code"] = True
+
     # ---------------- 任務與檢查點 ----------------
     missions = []
     for o in groups.get("MissionData", []):
@@ -111,14 +118,18 @@ def main():
     quote = re.compile(r'"([^"\n]{1,80})"')
     open_pat = re.compile(r'endgamepanel\.Open\(\s*"([^"]+)"')
     flag_pat = re.compile(r'statmodifymanager\.SetFlag\(\s*"([^"]+)"\s*,\s*(-?\d+)\s*\)')
+    # AddFlag 是累加，值無法靜態列舉；驗證時把這些旗標當成「任何值都可能」
+    add_pat = re.compile(r'statmodifymanager\.AddFlag\(\s*"([^"]+)"')
     next_pat = re.compile(r'luamanager\.SetNextScript\(\s*"([^"]+)"')
     for name, txt in texts:
-        e = scripts.setdefault(name, {"openEndings": set(), "setFlags": set(),
+        e = scripts.setdefault(name, {"openEndings": set(), "setFlags": set(), "addFlags": set(),
                                       "nextScripts": set(), "refs": set(), "endingOpens": {}})
         for m in open_pat.finditer(txt):
             e["openEndings"].add(m.group(1))
         for m in flag_pat.finditer(txt):
             e["setFlags"].add((m.group(1), int(m.group(2))))
+        for m in add_pat.finditer(txt):
+            e["addFlags"].add(m.group(1))
         for m in next_pat.finditer(txt):
             e["nextScripts"].add(m.group(1))
         for q in quote.findall(txt):
@@ -129,11 +140,12 @@ def main():
 
     out_scripts = {}
     for name, e in scripts.items():
-        if not (e["openEndings"] or e["setFlags"] or e["nextScripts"] or e["refs"]):
+        if not (e["openEndings"] or e["setFlags"] or e["addFlags"] or e["nextScripts"] or e["refs"]):
             continue
         out_scripts[name] = {
             "openEndings": sorted(e["openEndings"]),
             "setFlags": [{"flag": f, "value": v} for f, v in sorted(e["setFlags"])],
+            "addFlags": sorted(e["addFlags"]),
             "nextScripts": sorted(e["nextScripts"]),
             "refs": sorted(e["refs"]),
             "endingOpens": sorted(e["endingOpens"].values(),
@@ -141,13 +153,16 @@ def main():
         }
     scripts = out_scripts
 
+    switches = read_switches(args.game, data)
+
     os.makedirs(args.out, exist_ok=True)
     write(os.path.join(args.out, "flags.json"), flags)
     write(os.path.join(args.out, "missions.json"), missions)
     write(os.path.join(args.out, "endings.json"), endings)
     write(os.path.join(args.out, "scripts.json"), scripts)
+    write(os.path.join(args.out, "switches.json"), switches)
     print(f"flags={len(flags)} missions={len(missions)} checks={sum(len(m['checks']) for m in missions)} "
-          f"endings={len(endings)} scripts={len(scripts)}")
+          f"endings={len(endings)} scripts={len(scripts)} switches={len(switches)}")
 
 
 def note_values(note):
@@ -264,6 +279,105 @@ def read_localization(data_dir, filename):
                     break
     return out
 
+
+
+def code_flags(data, flags):
+    """找出名稱出現在遊戲程式 DLL（UTF-16 字串常數）裡的旗標。"""
+    import glob
+    pat = re.compile(rb"(?:[A-Za-z0-9_]\x00){4,16}")
+    seen = set()
+    for dll in glob.glob(os.path.join(data, "Managed", "*.dll")):
+        blob = open(dll, "rb").read()
+        for m in pat.finditer(blob):
+            seen.add(m.group().decode("utf-16le"))
+    return sorted(seen & set(flags))
+
+
+def read_switches(game, data):
+    """抽出所有劇情檢查點（SwitchResultData）的分支條件。
+
+    遊戲的 Switch 依序檢查 _items，回傳第一個成立的分支編號（從 1 起）；全部不成立時回傳
+    「分支數＋1」。_useCount 為真時改依執行次數判斷（_countItems），這裡只標記，不展開。
+    每個比較只保留驗證需要的兩種值：旗標名稱與常數；其他數值（屬性、好感、心上人等）
+    記成 {"other": 名稱}，驗證時一律視為可能成立。
+    """
+    import glob
+    import UnityPy
+    from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
+
+    paths = [os.path.join(data, "globalgamemanagers.assets")] + sorted(glob.glob(os.path.join(data, "sharedassets*.assets")))
+    envs = {os.path.basename(p): UnityPy.load(p) for p in paths if os.path.isfile(p)}
+    # 先辨識類別（不套 typetree），再掛上 TypeTreeGenerator 讀欄位，順序與 main() 相同
+    found = []
+    for name, env in envs.items():
+        for o in env.assets[0].objects.values():
+            if o.type.name != "MonoBehaviour":
+                continue
+            try:
+                d = o.read(check_read=False)
+                if d.m_Script.read().m_Name == "SwitchResultData":
+                    found.append((name, o))
+            except Exception:
+                continue
+    gen = TypeTreeGenerator(next(iter(envs.values())).assets[0].unity_version)
+    gen.load_local_game(os.path.abspath(game))
+    files = {}
+    for name, env in envs.items():
+        env.typetree_generator = gen
+        files[name] = env.assets[0]
+
+    def deref(owner, pp):
+        """PPtr 的 m_FileID 以「物件所在檔案」的 externals 為準（0＝同一檔案）。"""
+        if not pp or pp.get("m_PathID", 0) == 0:
+            return None, None
+        f = owner if pp["m_FileID"] == 0 else files.get(os.path.basename(owner.externals[pp["m_FileID"] - 1].path))
+        if f is None:
+            return None, None
+        try:
+            return f, f.objects[pp["m_PathID"]].read_typetree()
+        except Exception:
+            return None, None
+
+    group_cache = {}
+
+    def value_of(owner, pp):
+        key = (owner.name, pp["m_FileID"], pp["m_PathID"])
+        if key in group_cache:
+            return group_cache[key]
+        f, g = deref(owner, pp)
+        v = {"other": "?"}
+        if g is not None:
+            refs = g.get("_value") or []
+            v = {"other": g.get("m_Name", "?")}
+            if len(refs) == 1 and not refs[0].get("_negative"):
+                r = refs[0]
+                if r.get("_checkType") == 0:
+                    v = {"const": r.get("_constant", 0)}
+                elif r.get("_flag") and r["_flag"].get("m_PathID"):
+                    _, fl = deref(f, r["_flag"])
+                    if fl is not None:
+                        v = {"flag": fl["m_Name"]}
+        group_cache[key] = v
+        return v
+
+    out = {}
+    for fname, o in found:
+        owner = files[fname]
+        try:
+            t = o.read_typetree()
+        except Exception as e:
+            print(f"warn: switch {o.path_id} {e}", file=sys.stderr)
+            continue
+        sw = {"useCount": bool(t.get("_useCount")), "branches": []}
+        for it in t.get("_items") or []:
+            sw["branches"].append({
+                "or": it.get("_logicOp", 0) != 0,
+                "items": [[value_of(owner, c["_value1"]), c["_compareOp"], value_of(owner, c["_value2"])]
+                          for c in it.get("_items") or []],
+            })
+        # 同名的檢查點可能不只一份；全部保留，驗證時任一份可能成立即可
+        out.setdefault(t["m_Name"], []).append(sw)
+    return out
 
 
 def write(path, obj):

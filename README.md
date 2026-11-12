@@ -12,13 +12,15 @@
 
 ### 完整版與 Lite 版
 
-| | 完整版 | Lite 版 |
-|---|---|---|
-| 事件攻略（路線地圖、本旬事件、結局圖鑑） | ✔ | ✔ |
-| 事件任務 | ✔ 可指定必出、必定通過 | ✔ 只列出 |
+| 功能 | 完整版 | Lite 版 |
+|---|:---:|:---:|
+| 事件攻略 | ✔ | ✔ |
+| 事件任務 | ✔（可指定） | ✔（只列出） |
 | 選項提示 | ✔ | ✔ |
-| 骰子、屬性銀兩、戰鬥養成、雜物、遊戲速度 | ✔ | — |
-| 下載檔 | `LegendOfMortal_InternalMod_v1.3.2beta_*.zip` | `LegendOfMortal_InternalMod_Lite_v1.3.2beta_*.zip` |
+| 骰子、數值、戰鬥、雜物、速度 | ✔ | — |
+
+- 完整版：`LegendOfMortal_InternalMod_v1.3.2beta_*.zip`
+- Lite 版：`LegendOfMortal_InternalMod_Lite_v1.3.2beta_*.zip`
 
 兩個版本放在同一個發佈頁，擇一安裝即可，**請勿同時安裝**。只想看攻略、不想動到遊戲數值的玩家建議用 Lite 版（原始碼在 [`lite` 分支](../../tree/lite)）。
 

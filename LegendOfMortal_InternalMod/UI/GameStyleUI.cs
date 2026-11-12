@@ -22,6 +22,10 @@ namespace LegendOfMortal_InternalMod.UI
         public static GUIStyle Title, Section, Label, Entry, Desc, Tab, Close, Notice, CheckLabel;
         /// <summary>與按鈕/輸入框同列的文字：同高、垂直置中</summary>
         public static GUIStyle Row, RowEntry, RowDesc;
+        /// <summary>事件任務卡片底色，與路線地圖一致：綠＝會觸發、紅＝條件不足</summary>
+        public static GUIStyle BoxOk, BoxFail;
+        /// <summary>路線地圖分頁：可進入（主線、目前心上人的結緣線）用綠底，選中時仍是朱紅</summary>
+        public static GUIStyle TabOk;
         public static Texture2D LineTex, CheckOff, CheckOn, CheckHover;
         public static float Scale = 1f;
 
@@ -108,6 +112,10 @@ namespace LegendOfMortal_InternalMod.UI
 
             Skin.box = new GUIStyle(d.box) { border = new RectOffset(3, 3, 3, 3), padding = new RectOffset(Px(14), Px(14), Px(10), Px(10)) };
             SetAll(Skin.box, Framed(Hex(0xE7DECD), Hex(0xBFAE90), 1), Ink);
+            BoxOk = new GUIStyle(Skin.box);
+            SetAll(BoxOk, Framed(Hex(0xCDE6C0), Hex(0x8FB27E), 1), Ink);
+            BoxFail = new GUIStyle(Skin.box);
+            SetAll(BoxFail, Framed(Hex(0xEDC0B9), Hex(0xC08A82), 1), Ink);
 
             Skin.scrollView = new GUIStyle(d.scrollView);
             SetAll(Skin.scrollView, null, Ink);
@@ -138,6 +146,10 @@ namespace LegendOfMortal_InternalMod.UI
             Tab = new GUIStyle(Skin.button) { fontSize = Px(20), fixedHeight = Px(42) };
             Tab.onNormal.background = Tab.onHover.background = Tab.onActive.background = tabOn;
             Tab.onNormal.textColor = Tab.onHover.textColor = Tab.onActive.textColor = Paper;
+            TabOk = new GUIStyle(Tab);
+            TabOk.normal.background = Framed(Hex(0xCDE6C0), Hex(0x6F9A5E), 1);
+            TabOk.hover.background = Framed(Hex(0xB9DCA8), Hex(0x4F7F3F), 1);
+            TabOk.active.background = Framed(Hex(0xA6CF92), Hex(0x4F7F3F), 1);
 
             Close = new GUIStyle(Skin.button) { fontSize = Px(22), fixedHeight = Px(34), fixedWidth = Px(34), padding = new RectOffset(0, 0, 0, Px(2)) };
 

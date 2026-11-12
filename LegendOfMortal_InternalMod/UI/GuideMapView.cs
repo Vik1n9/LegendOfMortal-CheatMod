@@ -51,11 +51,11 @@ namespace LegendOfMortal_InternalMod.UI
         {
             EnsureStyles();
             var sheets = GuideMapData.Sheets;
-            if (Event.current.type == EventType.Layout) ApplyPending(sheets);
+            if (Event.current.type == EventType.Layout) { FollowLover(sheets); ApplyPending(sheets); }
             var sheet = sheets[sheetIndex];
 
             // 主線＋九位心上人共 10 頁，排成一列會比視窗內寬還寬、把整頁內容撐出畫面，故每列 5 個
-            int pick = GUILayout.SelectionGrid(sheetIndex, sheets.Select(s => s.Tab).ToArray(), SheetCols, S.Tab);
+            int pick = SheetTabs(sheets);
             if (pick != sheetIndex) pendingSheet = pick;
 
             var current = GuideMap.FindCurrent(sheet, now, routes);
@@ -63,9 +63,7 @@ namespace LegendOfMortal_InternalMod.UI
 
             GUILayout.Label(sheet.Intro, S.Desc);
             if (sheet.Lover >= 0) BondLine(sheet);
-            GUILayout.Label("點選地圖上的方塊，會跳出視窗顯示分歧、路線與條件。" +
-                            "綠底＝目前條件能進入，紅底＝已錯過或不在你的路線上（無法達成），藍框與藍線＝點選中的事件（加光暈）與前後相連的路線，深黃底＝結局群組，" +
-                            "其餘維持原色（金黃底＝分歧點、紙色＝條件未滿足或尚未判定）。朱紅外框＝你現在的位置（或下一步）。", S.Desc);
+            GUILayout.Label("點選地圖上的方塊，會跳出視窗顯示分歧、路線與條件。綠底＝可進入，紅底＝無法達成。", S.Desc);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("定位到目前", GUILayout.Width(S.Px(150))) && current != null) { pending = current.Id; locate = true; locateId = null; }
             GUILayout.Label(current != null ? $"{(GuideMap.StateOf(current, now, routes) == NodeState.Current ? "目前" : "下一步")}：<b>{current.Title}</b>（{TimeText(current)}）" : "你的路線上已沒有後續節點", S.RowDesc);
@@ -74,6 +72,48 @@ namespace LegendOfMortal_InternalMod.UI
 
             GUILayout.Space(S.Px(8));
             DrawCanvas(sheet, now, routes, current);
+        }
+
+        /// <summary>
+        /// 分頁按鈕（每列 SheetCols 個，等寬）。主線一律綠底；結緣線只有目前心上人那一頁綠底，其餘維持原色。
+        /// </summary>
+        private static int SheetTabs(MapSheet[] sheets)
+        {
+            int lover = -1;
+            try { lover = LoverReq.Current; } catch { }
+            int pick = sheetIndex;
+            for (int i = 0; i < sheets.Length; i += SheetCols)
+            {
+                GUILayout.BeginHorizontal();
+                for (int j = i; j < i + SheetCols; j++)
+                {
+                    if (j >= sheets.Length) { GUILayout.Label(GUIContent.none, GUILayout.ExpandWidth(true)); continue; }
+                    var sh = sheets[j];
+                    bool ok = sh.Lover < 0 || sh.Lover == lover;
+                    if (GUILayout.Toggle(j == sheetIndex, sh.Tab, ok ? S.TabOk : S.Tab, GUILayout.ExpandWidth(true)) && j != sheetIndex) pick = j;
+                }
+                GUILayout.EndHorizontal();
+            }
+            return pick;
+        }
+
+        private static int followedLover = int.MinValue;
+
+        /// <summary>
+        /// 心上人變了（含讀檔、第一次打開）就切到新心上人的結緣線並關掉舊的詳情；沒有心上人則回主線。
+        /// 心上人沒變時不干涉，玩家仍可自由切換分頁。
+        /// </summary>
+        private static void FollowLover(MapSheet[] sheets)
+        {
+            int lover;
+            try { lover = LoverReq.Current; } catch { return; }
+            if (lover == followedLover) return;
+            followedLover = lover;
+            int idx = Array.FindIndex(sheets, sh => sh.Lover >= 0 && sh.Lover == lover);
+            if (idx < 0) idx = Array.FindIndex(sheets, sh => sh.Lover < 0);
+            if (idx < 0 || idx == sheetIndex) return;
+            pendingSheet = idx;
+            popupOpen = false;
         }
 
         /// <summary>套用上一輪的點擊：切換分頁、或選取節點（節點在別的分頁時一併切過去）。</summary>
@@ -171,8 +211,18 @@ namespace LegendOfMortal_InternalMod.UI
             if (Time.unscaledTime < tonesNext) return;
             tonesNext = Time.unscaledTime + 1f;
             tones.Clear();
+            int lover = -1;
+            try { lover = LoverReq.Current; } catch { }
             foreach (var sheet in GuideMapData.Sheets)
-                foreach (var n in sheet.Nodes) tones[n] = ToneOf(n, now, routes);
+            {
+                // 結緣線只有目前心上人那一頁會亮綠；別人的結緣線即使單一事件條件都到了也進不去，維持原色
+                bool loverSheet = sheet.Lover < 0 || sheet.Lover == lover;
+                foreach (var n in sheet.Nodes)
+                {
+                    var t = ToneOf(n, now, routes);
+                    tones[n] = t == Tone.Ok && !loverSheet ? Tone.Plain : t;
+                }
+            }
         }
 
         /// <summary>

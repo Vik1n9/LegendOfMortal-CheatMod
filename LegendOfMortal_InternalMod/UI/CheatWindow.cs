@@ -281,6 +281,7 @@ namespace LegendOfMortal_InternalMod.UI
         private static void DrawMissions(Plugin plugin)
         {
             WikiCredit();
+            RefreshReady(plugin);
             if (plugin.Events.Count + plugin.Missions.Count == 0)
             {
                 GUILayout.Space(S.Px(40));
@@ -288,21 +289,58 @@ namespace LegendOfMortal_InternalMod.UI
                 GUILayout.Label("走到養成地點或進入劇情後，這裡會自動列出可觸發的事件與支線任務。", new GUIStyle(S.Desc) { alignment = TextAnchor.MiddleCenter });
                 return;
             }
+            GUILayout.Label("底色依目前條件即時判定：綠＝符合條件會觸發，紅＝條件不足。", S.Desc);
             if (plugin.Events.Count > 0)
             {
                 Section("養成事件");
-                GUILayout.Label("按「指定」後，下次在此地點必定觸發。", S.Desc);
-                foreach (var e in plugin.Events)
-                    EntryCard(e.Key, e.Desc, InfoPatch.TargetEvent == e.Ev ? "已指定" : "指定", () => InfoPatch.TargetEvent = e.Ev);
+                GUILayout.Label("會觸發的排在前面，其餘依機率由高到低排列。按「指定」後，下次在此地點必定觸發。", S.Desc);
+                foreach (var e in readyEvents)
+                    EntryCard(e.Key, e.Desc, InfoPatch.TargetEvent == e.Ev ? "已指定" : "指定", () => InfoPatch.TargetEvent = e.Ev, Ready(e.Ev));
             }
             if (plugin.Missions.Count > 0)
             {
                 Section("支線任務");
-                GUILayout.Label("按「必定通過」後，該任務判定必過。", S.Desc);
-                foreach (var m in plugin.Missions)
-                    EntryCard(m.Key, m.Desc, InfoPatch.TargetMission == m.M ? "已選定" : "必定通過", () => InfoPatch.TargetMission = m.M);
+                GUILayout.Label("會觸發的排在前面。按「必定通過」後，該任務判定必過。", S.Desc);
+                foreach (var m in readyMissions)
+                    EntryCard(m.Key, m.Desc, InfoPatch.TargetMission == m.M ? "已選定" : "必定通過", () => InfoPatch.TargetMission = m.M, Ready(m.M));
             }
         }
+
+        // 會觸發與否每秒重算一次，只在 Layout 更新，避免同一幀版面前後不一致
+        // （底色反映遊戲原本的判定；「指定」「必定通過」的效果不計入）
+        private static readonly Dictionary<object, bool> readyCache = new Dictionary<object, bool>();
+        private static float readyNextRefresh;
+        private static int readyListCount = -1;
+        // 依判定結果排序後的清單（會觸發的在前；OrderBy 為穩定排序，同組維持原本順序）
+        private static List<(Mortal.Story.PositionEventData Ev, string Key, string Desc)> readyEvents = new();
+        private static List<(MissionCheckData M, string Key, string Desc)> readyMissions = new();
+
+        private static void RefreshReady(Plugin plugin)
+        {
+            if (Event.current.type != EventType.Layout) return;
+            // 清單換了（走到新地點、進入劇情）就立刻重算，不必等到下一秒
+            // （比對清單筆數而非快取筆數：同一事件可能出現在多個地點，快取筆數會比較少）
+            int count = plugin.Events.Count + plugin.Missions.Count;
+            if (count == readyListCount && Time.unscaledTime < readyNextRefresh) return;
+            readyListCount = count;
+            readyNextRefresh = Time.unscaledTime + 1f;
+            readyCache.Clear();
+            foreach (var e in plugin.Events)
+            {
+                bool ok;
+                // 被「指定」的事件，GetRate 補丁會回傳 99999 並清除指定：判定時先暫時取消，算出原本機率後再還原
+                var target = InfoPatch.TargetEvent;
+                InfoPatch.TargetEvent = null;
+                try { ok = e.Ev.GetRate() > 0; } catch { ok = false; }   // 啟用條件不符時遊戲回傳 0
+                finally { InfoPatch.TargetEvent = target; }
+                readyCache[e.Ev] = ok;
+            }
+            foreach (var m in plugin.Missions) readyCache[m.M] = DataHelper.IsMissionReady(m.M);
+            readyEvents = plugin.Events.OrderBy(e => Ready(e.Ev) ? 0 : 1).ToList();
+            readyMissions = plugin.Missions.OrderBy(m => Ready(m.M) ? 0 : 1).ToList();
+        }
+
+        private static bool Ready(object key) => key != null && readyCache.TryGetValue(key, out var ok) && ok;
 
         // ---- 雜物 ----
         private static string itemSearch = string.Empty;
@@ -380,7 +418,7 @@ namespace LegendOfMortal_InternalMod.UI
             GUILayout.Label("只影響一般遊玩，不會干擾暫停與劇情快轉。", S.Desc);
 
             Section("關於");
-            GUILayout.Label("《唐門密卷》v1.3.1 Beta（適用 崆峒神威 1.0.6001.0）", S.Desc);
+            GUILayout.Label("《唐門密卷》v1.3.2 Beta（適用 崆峒神威 1.0.6001.0）", S.Desc);
             GUILayout.Label("設定檔：BepInEx/config/LegendOfMortal_InternalMod.cfg", S.Desc);
         }
 
@@ -509,9 +547,9 @@ namespace LegendOfMortal_InternalMod.UI
             CheatEngine.SetStat(type, value);
         }
 
-        private static void EntryCard(string key, string desc, string button, Action onClick)
+        private static void EntryCard(string key, string desc, string button, Action onClick, bool ready)
         {
-            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.BeginVertical(ready ? S.BoxOk : S.BoxFail);
             GUILayout.BeginHorizontal();
             GUILayout.Label(OnPaper(key), S.Entry);
             GUILayout.FlexibleSpace();

@@ -17,6 +17,7 @@
     out/endings.json   汗青書編號與中文名稱（LibraryItemData 20000~20065）
     out/scripts.json   劇本名稱 → 開啟的結局、寫入／累加的旗標、互指的劇本名稱、結局開啟點的旗標條件
     out/switches.json  劇情檢查點（checkpointmanager.Switch）名稱 → 各分支條件（旗標／常數比較）
+                       （劇本裡被不存在的 Condition 停用的選項分支，會在解析前挖空，並記在 scripts.json 的 deadOptions）
 """
 import argparse, json, os, re, sys
 from collections import defaultdict
@@ -102,6 +103,9 @@ def main():
                         "title": localization.get("Title/" + d.m_Name) or d._title})
     endings.sort(key=lambda e: e["no"])
 
+    # ---------------- 劇情檢查點 ----------------
+    switches, conditions = read_switches(args.game, data)
+
     # ---------------- Lua 劇本 ----------------
     # 除了明確的 SetNextScript，劇本之間也會用其他 API 互指（對話、劇情管理器等），
     # 因此把「任何字串常數剛好是另一個劇本名稱」都當成一條邊，用來算可達性。
@@ -121,9 +125,20 @@ def main():
     # AddFlag 是累加，值無法靜態列舉；驗證時把這些旗標當成「任何值都可能」
     add_pat = re.compile(r'statmodifymanager\.AddFlag\(\s*"([^"]+)"')
     next_pat = re.compile(r'luamanager\.SetNextScript\(\s*"([^"]+)"')
+    dead_total = 0
     for name, txt in texts:
         e = scripts.setdefault(name, {"openEndings": set(), "setFlags": set(), "addFlags": set(),
-                                      "nextScripts": set(), "refs": set(), "endingOpens": {}})
+                                      "nextScripts": set(), "refs": set(), "endingOpens": {}, "deadOptions": set(), "deadTargets": set()})
+        # 被不存在的 Condition 藏起來的選項，其分支永遠不會執行：先挖空，裡面的結局、旗標、劇本互指都不算
+        dead, notes = dead_lines(txt, conditions)
+        if dead:
+            lines = txt.split("\n")
+            for i in dead:
+                for m in next_pat.finditer(lines[i]):
+                    e["deadTargets"].add(m.group(1))
+            txt = "\n".join("" if i in dead else l for i, l in enumerate(lines))
+            e["deadOptions"].update(notes)
+            dead_total += 1
         for m in open_pat.finditer(txt):
             e["openEndings"].add(m.group(1))
         for m in flag_pat.finditer(txt):
@@ -146,14 +161,14 @@ def main():
             "openEndings": sorted(e["openEndings"]),
             "setFlags": [{"flag": f, "value": v} for f, v in sorted(e["setFlags"])],
             "addFlags": sorted(e["addFlags"]),
+            "deadOptions": sorted(e["deadOptions"]),
+            "deadTargets": sorted(e["deadTargets"]),
             "nextScripts": sorted(e["nextScripts"]),
             "refs": sorted(e["refs"]),
             "endingOpens": sorted(e["endingOpens"].values(),
                                   key=lambda x: (x["id"], json.dumps(x["guards"], sort_keys=True))),
         }
     scripts = out_scripts
-
-    switches = read_switches(args.game, data)
 
     os.makedirs(args.out, exist_ok=True)
     write(os.path.join(args.out, "flags.json"), flags)
@@ -162,7 +177,8 @@ def main():
     write(os.path.join(args.out, "scripts.json"), scripts)
     write(os.path.join(args.out, "switches.json"), switches)
     print(f"flags={len(flags)} missions={len(missions)} checks={sum(len(m['checks']) for m in missions)} "
-          f"endings={len(endings)} scripts={len(scripts)} switches={len(switches)}")
+          f"endings={len(endings)} scripts={len(scripts)} switches={len(switches)} "
+          f"conditions={len(conditions)} 含停用選項的劇本={dead_total}")
 
 
 def note_values(note):
@@ -195,6 +211,87 @@ def time_of(c):
 
 SWITCH_DECL = re.compile(r'local\s+(switch_\w+)_result\s*=\s*checkpointmanager\.Switch\("([^"]+)"\)')
 FLAG_KEY = re.compile(r'^([A-Z]\d{5})_(\d+)$')
+
+
+COND_VAR = re.compile(r'local\s+(\w+)\s*=\s*checkpointmanager\.Condition\("([^"]+)"\)')
+OPT_BY_VAR = re.compile(r'(\w+)\[(\d+)\]\s*=\s*(\w+)\s+and\s')
+OPT_INLINE = re.compile(r'(\w+)\[(\d+)\]\s*=\s*checkpointmanager\.Condition\("([^"]+)"\)\s+and\s')
+TABLE_NEW = re.compile(r'local\s+(\w+)\s*=\s*\{\s*\}')
+CHOOSE = re.compile(r'local\s+(\w+)\s*=\s*choose\((\w+)\)')
+CHOICE_IF = re.compile(r'(?:else)?if\s+(\w+)\s*==\s*(\d+)\s+then')
+
+
+def dead_lines(text, known):
+    """找出永遠不會執行的選項分支（回傳行號集合與說明）。
+
+    選單選項的寫法是 `talk[4] = XXX and "event+..." or "~x"`，其中
+    `local XXX = checkpointmanager.Condition("XXX")`。遊戲的 Condition 找不到同名
+    ConditionResultData 時回傳 false，該選項就不會顯示（開發者用不存在的 "XXX" 停用選項）。
+    因此 `if choice_talk == 4 then` 這個分支內的所有行都走不到。
+    known 為空（沒讀到檢查點資料）時不判斷，避免誤殺。
+    """
+    if not known:
+        return set(), set()
+    lines = text.split("\n")
+    cond_var = {}                   # 變數 → Condition 名稱（取最近一次指定）
+    table_dead = defaultdict(set)   # 選項表 → 停用的選項編號
+    table_note = defaultdict(dict)
+    choice_dead = {}                # choose() 的結果變數 → 停用的選項編號
+    choice_note = {}
+    dead, notes = set(), set()
+    stack = []                      # (縮排, 這個分支是否停用)
+
+    def branch_dead(s):
+        m = CHOICE_IF.match(s)
+        if not m or m.group(1) not in choice_dead:
+            return False
+        n = int(m.group(2))
+        if n in choice_dead[m.group(1)]:
+            notes.add(choice_note[m.group(1)][n])
+            return True
+        return False
+
+    for i, line in enumerate(lines):
+        s = line.strip()
+        ind = len(line) - len(line.lstrip("\t"))
+        if s == "end" or s.startswith("end)") or s.startswith("end "):
+            if stack and stack[-1][0] == ind:
+                stack.pop()
+        elif s.startswith("elseif ") or s == "else":
+            if stack and stack[-1][0] == ind:
+                stack[-1] = (ind, branch_dead(s))
+        elif s.startswith("if ") and s.endswith("then"):
+            stack.append((ind, branch_dead(s)))
+        elif s.startswith("for ") or s.startswith("while ") or s == "do" or s.startswith("function"):
+            stack.append((ind, False))
+        if any(d for _, d in stack):
+            dead.add(i)
+            continue
+
+        m = COND_VAR.match(s)
+        if m:
+            cond_var[m.group(1)] = m.group(2)
+        m = TABLE_NEW.match(s)
+        if m:
+            table_dead.pop(m.group(1), None)
+            table_note.pop(m.group(1), None)
+        m = OPT_INLINE.match(s)
+        cond = m.group(3) if m else None
+        if not m:
+            m = OPT_BY_VAR.match(s)
+            cond = cond_var.get(m.group(3)) if m else None
+        if m and cond is not None:
+            tbl, n = m.group(1), int(m.group(2))
+            if cond not in known:
+                table_dead[tbl].add(n)
+                table_note[tbl][n] = f"{tbl}[{n}]:{cond}"
+            else:
+                table_dead[tbl].discard(n)
+        m = CHOOSE.match(s)
+        if m:
+            choice_dead[m.group(1)] = set(table_dead.get(m.group(2), ()))
+            choice_note[m.group(1)] = dict(table_note.get(m.group(2), {}))
+    return dead, notes
 
 
 def ending_opens(text):
@@ -294,7 +391,7 @@ def code_flags(data, flags):
 
 
 def read_switches(game, data):
-    """抽出所有劇情檢查點（SwitchResultData）的分支條件。
+    """抽出所有劇情檢查點（SwitchResultData）的分支條件，並回傳所有 ConditionResultData 的名稱。
 
     遊戲的 Switch 依序檢查 _items，回傳第一個成立的分支編號（從 1 起）；全部不成立時回傳
     「分支數＋1」。_useCount 為真時改依執行次數判斷（_countItems），這裡只標記，不展開。
@@ -309,14 +406,18 @@ def read_switches(game, data):
     envs = {os.path.basename(p): UnityPy.load(p) for p in paths if os.path.isfile(p)}
     # 先辨識類別（不套 typetree），再掛上 TypeTreeGenerator 讀欄位，順序與 main() 相同
     found = []
+    conditions = set()   # 所有 ConditionResultData 名稱：劇本 checkpointmanager.Condition() 查不到時回傳 false
     for name, env in envs.items():
         for o in env.assets[0].objects.values():
             if o.type.name != "MonoBehaviour":
                 continue
             try:
                 d = o.read(check_read=False)
-                if d.m_Script.read().m_Name == "SwitchResultData":
+                cls = d.m_Script.read().m_Name
+                if cls == "SwitchResultData":
                     found.append((name, o))
+                elif cls == "ConditionResultData":
+                    conditions.add(d.m_Name)
             except Exception:
                 continue
     gen = TypeTreeGenerator(next(iter(envs.values())).assets[0].unity_version)
@@ -377,7 +478,7 @@ def read_switches(game, data):
             })
         # 同名的檢查點可能不只一份；全部保留，驗證時任一份可能成立即可
         out.setdefault(t["m_Name"], []).append(sw)
-    return out
+    return out, conditions
 
 
 def write(path, obj):

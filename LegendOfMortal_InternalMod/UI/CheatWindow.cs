@@ -198,6 +198,7 @@ namespace LegendOfMortal_InternalMod.UI
         private static void DrawMissions(Plugin plugin)
         {
             WikiCredit();
+            RefreshReady(plugin);
             if (plugin.Events.Count + plugin.Missions.Count == 0)
             {
                 GUILayout.Space(S.Px(40));
@@ -205,19 +206,51 @@ namespace LegendOfMortal_InternalMod.UI
                 GUILayout.Label("走到養成地點或進入劇情後，這裡會自動列出可觸發的事件與支線任務。", new GUIStyle(S.Desc) { alignment = TextAnchor.MiddleCenter });
                 return;
             }
+            GUILayout.Label("底色依目前條件即時判定：綠＝符合條件會觸發，紅＝條件不足。", S.Desc);
             if (plugin.Events.Count > 0)
             {
                 Section("養成事件");
-                GUILayout.Label("目前地點可能觸發的事件，依機率由高到低排列。", S.Desc);
-                foreach (var e in plugin.Events) EntryCard(e.Key, e.Desc);
+                GUILayout.Label("目前地點可能觸發的事件：會觸發的排在前面，其餘依機率由高到低排列。", S.Desc);
+                foreach (var e in readyEvents) EntryCard(e.Key, e.Desc, Ready(e.Ev));
             }
             if (plugin.Missions.Count > 0)
             {
                 Section("支線任務");
-                GUILayout.Label("進行中的支線任務與觸發條件。", S.Desc);
-                foreach (var m in plugin.Missions) EntryCard(m.Key, m.Desc);
+                GUILayout.Label("進行中的支線任務與觸發條件：會觸發的排在前面。", S.Desc);
+                foreach (var m in readyMissions) EntryCard(m.Key, m.Desc, Ready(m.M));
             }
         }
+
+        // 會觸發與否每秒重算一次，只在 Layout 更新，避免同一幀版面前後不一致
+        private static readonly Dictionary<object, bool> readyCache = new Dictionary<object, bool>();
+        private static float readyNextRefresh;
+        private static int readyListCount = -1;
+        // 依判定結果排序後的清單（會觸發的在前；OrderBy 為穩定排序，同組維持原本順序）
+        private static List<(Mortal.Story.PositionEventData Ev, string Key, string Desc)> readyEvents = new();
+        private static List<(MissionCheckData M, string Key, string Desc)> readyMissions = new();
+
+        private static void RefreshReady(Plugin plugin)
+        {
+            if (Event.current.type != EventType.Layout) return;
+            // 清單換了（走到新地點、進入劇情）就立刻重算，不必等到下一秒
+            // （比對清單筆數而非快取筆數：同一事件可能出現在多個地點，快取筆數會比較少）
+            int count = plugin.Events.Count + plugin.Missions.Count;
+            if (count == readyListCount && Time.unscaledTime < readyNextRefresh) return;
+            readyListCount = count;
+            readyNextRefresh = Time.unscaledTime + 1f;
+            readyCache.Clear();
+            foreach (var e in plugin.Events)
+            {
+                bool ok;
+                try { ok = e.Ev.GetRate() > 0; } catch { ok = false; }   // 啟用條件不符時遊戲回傳 0
+                readyCache[e.Ev] = ok;
+            }
+            foreach (var m in plugin.Missions) readyCache[m.M] = DataHelper.IsMissionReady(m.M);
+            readyEvents = plugin.Events.OrderBy(e => Ready(e.Ev) ? 0 : 1).ToList();
+            readyMissions = plugin.Missions.OrderBy(m => Ready(m.M) ? 0 : 1).ToList();
+        }
+
+        private static bool Ready(object key) => key != null && readyCache.TryGetValue(key, out var ok) && ok;
 
         private static void DrawOptionInfo()
         {
@@ -250,9 +283,9 @@ namespace LegendOfMortal_InternalMod.UI
             return value;
         }
 
-        private static void EntryCard(string key, string desc)
+        private static void EntryCard(string key, string desc, bool ready)
         {
-            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.BeginVertical(ready ? S.BoxOk : S.BoxFail);
             GUILayout.Label(OnPaper(key), S.Entry);
             if (!string.IsNullOrEmpty(desc)) GUILayout.Label(OnPaper(desc), S.Desc);
             GUILayout.EndVertical();

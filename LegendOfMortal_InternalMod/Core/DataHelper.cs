@@ -117,6 +117,22 @@ namespace LegendOfMortal_InternalMod.Core
             return dict;
         }
 
+        /// <summary>
+        /// 支線任務此刻是否會觸發：等同遊戲 MissionCheckData.Check()（啟用中、所有條件成立、時間符合），
+        /// 但不直接呼叫 Check()，避免觸發 InfoPatch 在回想紀錄寫入檢查點。條件判定本身無副作用。
+        /// </summary>
+        public static bool IsMissionReady(MissionCheckData c)
+        {
+            try
+            {
+                if (!c.GetFieldValue<bool>("_active")) return false;
+                foreach (var it in c.GetFieldValue<ConditionResultItem[]>("_conditions"))
+                    if (it != null && !it.Check()) return false;
+                return GetMissionPeriod(c, out _);
+            }
+            catch { return false; }
+        }
+
         private static string FirstLine(string s)
             => string.IsNullOrWhiteSpace(s) ? "" : s.Trim().Split('\n')[0].Trim();
 

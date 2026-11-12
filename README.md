@@ -1,10 +1,16 @@
-# 《唐門密卷》LegendOfMortal-CheatMod
-《活俠傳》（Legend of Mortal）內置 MOD《唐門密卷》，目前版本 **v1.3.1 Beta**。適用 Steam 版 **1.0.6001.0（崆峒神威）** 以上（1.0.6000.x 請使用 MOD v1.0），支援 Windows 與 Linux / Steam Deck。
+# 《唐門密卷》Lite
+《活俠傳》（Legend of Mortal）內置 MOD《唐門密卷》的 **Lite 版**，目前版本 **v1.3.1 Beta**。
+
+> [!NOTE]
+> 這是 `lite` 分支：只保留**事件攻略**、**事件任務**（只列出，不指定）、**選項提示**三項功能，給只想看攻略、不想動到遊戲數值的玩家使用。
+> 不含骰子控制、數值修改、戰鬥／養成作弊、雜物、遊戲速度，也沒有任何改變判定結果的補丁。完整版請見 [`main` 分支](../../tree/main)。
+
+適用 Steam 版 **1.0.6001.0（崆峒神威）** 以上（1.0.6000.x 請使用 MOD v1.0），支援 Windows 與 Linux / Steam Deck。
 
 > [!WARNING]
 > **第一次玩《活俠傳》請先不要安裝這個 MOD。**
 >
-> 這個 MOD 會直接攤開所有路線、分歧條件、結局與結緣條件，還能指定骰子點數、修改數值，等於把整本攻略和修改器塞進遊戲裡。
+> 這個 MOD 會直接攤開所有路線、分歧條件、結局與結緣條件，等於把整本攻略塞進遊戲裡。
 > 《活俠傳》的樂趣有很大一部分來自未知：不知道選項會通往哪裡、在有限的行動次數裡取捨、錯過之後才發現的遺憾。
 > 第一輪就裝上它，會大幅降低遊戲的樂趣，而且劇情和結局都會被暴雷。
 >
@@ -14,8 +20,7 @@
 
 ## 安裝
 
-1. 到 [v1.3.1 Beta 發佈頁](../../releases/tag/v1.3.1beta) 下載 `LegendOfMortal_InternalMod_v1.3.1beta_full.zip`。
-   （想用穩定版可到 [最新正式版](../../releases/latest) 下載 v1.2。）
+1. 到 [v1.3.1 Beta 發佈頁](../../releases/tag/v1.3.1beta) 下載 `LegendOfMortal_InternalMod_Lite_v1.3.1beta_full.zip`。
    （已安裝 BepInEx 5 的玩家可改下載 `plugin_only` 版。）
 2. Steam 收藏庫對《活俠傳》按右鍵 → 管理 → 瀏覽本機檔案。
 3. 把壓縮檔內容全部解壓到該資料夾（`winhttp.dll` 要和 `Mortal.exe` 在同一層）。
@@ -23,7 +28,9 @@
    ```
    WINEDLLOVERRIDES="winhttp=n,b" %command%
    ```
-5. 從 Steam 啟動遊戲，畫面上方出現「唐門密卷已載入」即安裝成功。
+5. 從 Steam 啟動遊戲，畫面上方出現「唐門密卷 Lite 已載入」即安裝成功。
+
+**請勿和完整版同時安裝**：兩者共用同一個 BepInEx GUID，只會載入其中一個。從完整版換成 Lite 版時，請先刪除 `BepInEx/plugins/LegendOfMortal_InternalMod` 資料夾。
 
 若遊戲資料夾已有 BepInEx 6，請先刪除 `BepInEx` 資料夾、`winhttp.dll`、`doorstop_config.ini`、`.doorstop_version`、`changelog.txt` 再安裝。
 
@@ -31,22 +38,17 @@
 
 ## 使用
 
-- 遊戲中按 **F1** 開關「唐門密卷」視窗，拖曳標題列可移動。
-- 數值類功能請先打開對應的遊戲介面（人物選單、門派介面）再設定。
-- 快捷鍵與各功能預設值可在 `BepInEx/config/LegendOfMortal_InternalMod.cfg` 修改。
-- 修改的數值會寫入存檔，使用前建議先備份存檔。
+- 遊戲中按 **F1** 開關「唐門密卷 Lite」視窗，拖曳標題列可移動。
+- 快捷鍵與選項提示開關可在 `BepInEx/config/LegendOfMortal_InternalMod.cfg` 修改（與完整版共用設定檔）。
+- Lite 版不修改任何數值或存檔內容。
 
 ## 功能
 
 | 分頁 | 功能 |
 |---|---|
-| 骰子選項 | 指定天命骰子點數；在劇情選項後顯示結果（如 +銀兩） |
-| 屬性銀兩 | 設定銀兩、命運；回滿／無限行動點；人物屬性（含陰陽內功、心相狀態切換）；門派數值 |
-| 戰鬥養成 | 單挑／群戰我方無敵、群戰一擊必殺、技能無冷卻、戰鬥不限時；武學／煉丹／鍛造三組各自可設「不消耗」「快速升級」、好感只升不降 |
 | 事件攻略 | 路線地圖（主線與九位心上人的結緣線）、本旬事件、結局圖鑑，內容依 [活俠傳 wiki](https://smilin.net/LoM-wiki/) 整理 |
-| 事件任務 | 列出目前地點可觸發的養成事件、機率與可能結果，並可指定必出；列出支線任務與條件並可設為必定通過 |
-| 雜物 | 修改背包「雜物」數量（藥品、食物等可使用道具），可搜尋、直接設為指定數量或累加；書籍與寶物不受影響 |
-| 系統 | 遊戲速度 0.5～5 倍 |
+| 事件任務 | 列出目前地點可觸發的養成事件、機率與可能結果；列出進行中的支線任務與條件（只列出，不能指定必出或必定通過） |
+| 選項提示 | 在劇情選項後顯示結果（如 +銀兩），可在視窗內隨時開關 |
 
 ### 事件攻略：路線地圖
 
@@ -82,7 +84,7 @@
 
 ### 事件任務
 
-列出目前地點可觸發的養成事件（以 wiki 事件名稱顯示，如「後山・挑柴：抄捷徑」）、機率、機率加成與可能結果，按「指定」後下次在此地點必定觸發。
+列出目前地點可觸發的養成事件（以 wiki 事件名稱顯示，如「後山・挑柴：抄捷徑」）、機率、機率加成與可能結果。Lite 版只列出資訊，沒有完整版的「指定」按鈕。
 
 ![事件任務](docs/images/training-events.jpg)
 
@@ -92,11 +94,11 @@
 
 ![選項提示](docs/images/option-info.jpg)
 
-### 屬性銀兩
+## Lite 版說明
 
-設定銀兩、命運與行動點，人物屬性可一鍵設為指定值；心相、陰陽內功可直接切換狀態。
-
-![屬性銀兩](docs/images/stats.jpg)
+- DLL 名稱為 `LegendOfMortal_InternalMod_Lite.dll`，安裝在 `BepInEx/plugins/LegendOfMortal_InternalMod_Lite/`。
+- 唯一的 Harmony 補丁是 `InfoPatch`：只讀取劇本與任務資料、在選項文字後附加說明；完整版中改變養成事件機率與任務判定的部分已移除。
+- 打包：`LegendOfMortal_InternalMod/package/package.sh`，輸出 `dist/LegendOfMortal_InternalMod_Lite_v<版本>_*.zip`。
 
 ## v1.3.1 Beta 更新內容
 

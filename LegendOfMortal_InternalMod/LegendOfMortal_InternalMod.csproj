@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>LegendOfMortal_InternalMod</AssemblyName>
+    <AssemblyName>LegendOfMortal_InternalMod_Lite</AssemblyName>
     <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -11,7 +11,7 @@
     <!-- 遊戲安裝路徑：預設為 Linux Steam 位置，其他環境用 dotnet build -p:GameDir=... 覆寫 -->
     <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/LegendOfMortal</GameDir>
     <GameManaged>$(GameDir)/Mortal_Data/Managed</GameManaged>
-    <Description>《唐門密卷》LegendOfMortal 內置MOD：骰子控制、選項提示與作弊功能（v1.0.6001.0 崆峒神威適用）。</Description>
+    <Description>《唐門密卷》LegendOfMortal Lite：只含事件攻略（路線地圖、本旬事件、結局圖鑑），不含作弊（v1.0.6001.0 崆峒神威適用）。</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -99,7 +99,7 @@
 
   <!-- 編譯後自動部署到遊戲 plugins；遊戲執行中時跳過（覆寫已載入的 DLL 可能讓遊戲崩潰） -->
   <PropertyGroup>
-    <ModDeployDir>$(GameDir)/BepInEx/plugins/LegendOfMortal_InternalMod</ModDeployDir>
+    <ModDeployDir>$(GameDir)/BepInEx/plugins/LegendOfMortal_InternalMod_Lite</ModDeployDir>
   </PropertyGroup>
 
   <Target Name="DeployToGame" AfterTargets="Build" Condition="Exists('$(ModDeployDir)')">

@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace LegendOfMortal_InternalMod
 {
     /// <summary>
-    /// 每幀邏輯（快捷鍵／作弊 Tick／IMGUI）獨立放在自建的隱藏常駐物件上，
+    /// 每幀邏輯（快捷鍵／IMGUI）獨立放在自建的隱藏常駐物件上，
     /// 不依賴 BepInEx_Manager：實機發現外掛載入成功但 Update/OnGUI 完全沒跑。
     /// 每次切場景都會檢查，被銷毀就重建。
     /// </summary>
@@ -41,7 +41,6 @@ namespace LegendOfMortal_InternalMod
             }
 
             UI.ClickBlocker.Sync(UI.CheatWindow.Visible, UI.CheatWindow.WindowRect, UI.CheatWindow.PopupRect);
-            Features.CheatEngine.Tick();
         }
 
         private void OnGUI()
@@ -53,7 +52,7 @@ namespace LegendOfMortal_InternalMod
             // 放上方正中，避開左上角的貢獻度/行動 HUD 與右上角選單
             if (!UI.CheatWindow.Visible && Time.realtimeSinceStartup < 60f)
             {
-                var text = new GUIContent($"唐門密卷已載入　按 <b>{ModConfig.MainMenuKey.Value}</b> 開關視窗");
+                var text = new GUIContent($"唐門密卷 Lite 已載入　按 <b>{ModConfig.MainMenuKey.Value}</b> 開關視窗");
                 var size = UI.GameStyleUI.Notice.CalcSize(text);
                 GUI.Label(new Rect((Screen.width - size.x) / 2f, UI.GameStyleUI.Px(16), size.x, size.y), text, UI.GameStyleUI.Notice);
             }

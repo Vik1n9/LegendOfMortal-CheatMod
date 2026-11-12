@@ -6,11 +6,15 @@ using LegendOfMortal_InternalMod.Config;
 using LegendOfMortal_InternalMod.Core;
 using Mortal.Core;
 using Mortal.Story;
-using UnityEngine;
 
 namespace LegendOfMortal_InternalMod
 {
-    [BepInPlugin("LegendOfMortal_InternalMod", "唐門密卷", "1.3.1")]
+    /// <summary>
+    /// 《唐門密卷》Lite：事件攻略、事件任務（只列出不指定）、選項提示。
+    /// 不含骰子控制、數值修改或任何改變判定結果的補丁；唯一的 Harmony 補丁 InfoPatch 只讀取並附加顯示文字。
+    /// GUID 與完整版相同：兩者同時安裝時 BepInEx 只會載入其中一個，避免兩個視窗互搶快捷鍵。
+    /// </summary>
+    [BepInPlugin("LegendOfMortal_InternalMod", "唐門密卷 Lite", "1.3.1")]
     public class Plugin : BaseUnityPlugin
     {
         public static Plugin Instance { get; private set; }
@@ -27,16 +31,11 @@ namespace LegendOfMortal_InternalMod
             _log = Logger;
             ModConfig.Init(base.Config);
 
+            // 事件任務頁也靠 InfoPatch 收集資料，故一律套用；選項提示的顯示由設定即時切換
             _harmony = new Harmony("LegendOfMortal_InternalMod");
-            Patch(typeof(Patches.DicePatch), ModConfig.EnableDiceController.Value, "骰子控制");
-            Patch(typeof(Patches.InfoPatch), ModConfig.EnableOptionInfo.Value, "選項情報");
-            Patch(typeof(Patches.BattleCheatPatch), ModConfig.EnableCheats.Value, "戰鬥作弊");
-            Patch(typeof(Patches.UpkeepCheatPatch), ModConfig.EnableCheats.Value, "養成作弊");
-            Patch(typeof(Patches.PracticeCheatPatch), ModConfig.EnableCheats.Value, "練功作弊");
-            Patch(typeof(Patches.ForgeAlchemyCheatPatch), ModConfig.EnableCheats.Value, "煉丹／鍛造升級作弊");
-            Patch(typeof(Patches.FriendshipCheatPatch), ModConfig.EnableCheats.Value, "好感作弊");
-            Patch(typeof(Patches.CombatSinglePatch), ModConfig.EnableCheats.Value, "單挑作弊");
-            LogInfo("《唐門密卷》v1.3.1 Beta 載入成功（適配 v1.0.6001.0 崆峒神威）");
+            try { _harmony.PatchAll(typeof(Patches.InfoPatch)); LogInfo("補丁已套用：選項提示／事件任務"); }
+            catch (System.Exception ex) { LogError($"補丁 選項提示／事件任務 失敗: {ex.Message}"); }
+            LogInfo("《唐門密卷》Lite v1.3.1 Beta 載入成功（適配 v1.0.6001.0 崆峒神威）");
 
             // Update/OnGUI 交給自建常駐物件，不依賴 BepInEx_Manager 存活
             ModRunner.Ensure("Awake");
@@ -52,8 +51,6 @@ namespace LegendOfMortal_InternalMod
         public void ClearLog(string friendlyName, string luaString)
         {
             eventEntries.Clear(); missionEntries.Clear();
-            Patches.InfoPatch.TargetEvent = null;
-            Patches.InfoPatch.TargetMission = null;
             // 解析結果存進 LuaParser.OptionResult，供 InfoPatch 在選項後顯示收益
             LuaParser.Instance.ExtractOptionActionsFromLua(friendlyName, luaString);
             foreach (var p in LuaParser.Instance.ExtractPositionWorkFromLua(friendlyName, luaString))
@@ -71,12 +68,5 @@ namespace LegendOfMortal_InternalMod
 
         public static void LogInfo(object o) => _log?.LogInfo(o);
         public static void LogError(object o) => _log?.LogError(o);
-
-        private void Patch(System.Type type, bool enabled, string name)
-        {
-            if (!enabled) return;
-            try { _harmony.PatchAll(type); LogInfo($"補丁已套用：{name}"); }
-            catch (System.Exception ex) { LogError($"補丁 {name} 失敗: {ex.Message}"); }
-        }
     }
 }

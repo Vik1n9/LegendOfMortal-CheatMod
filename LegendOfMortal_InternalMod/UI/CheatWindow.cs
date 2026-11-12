@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using LegendOfMortal_InternalMod.Core;
-using LegendOfMortal_InternalMod.Features;
-using LegendOfMortal_InternalMod.Patches;
 using Mortal.Core;
 using UnityEngine;
 using Cfg = LegendOfMortal_InternalMod.Config.ModConfig;
@@ -12,8 +10,8 @@ using S = LegendOfMortal_InternalMod.UI.GameStyleUI;
 namespace LegendOfMortal_InternalMod.UI
 {
     /// <summary>
-    /// 主視窗「唐門密卷」：F1 開關，拖曳標題列移動。
-    /// 分頁：骰子選項／屬性銀兩／戰鬥養成／事件攻略（路線地圖・本旬事件・結局圖鑑）／事件任務／系統
+    /// 主視窗「唐門密卷 Lite」：F1 開關，拖曳標題列移動。
+    /// Lite 版分頁：事件攻略（路線地圖・本旬事件・結局圖鑑）／事件任務（只列出，不指定）／選項提示
     /// </summary>
     public static class CheatWindow
     {
@@ -28,20 +26,12 @@ namespace LegendOfMortal_InternalMod.UI
 
         private const int WindowId = 2077, PopupId = 2078;
         private static bool mapPopup;
-        private const float BaseW = 845f, BaseScrollH = 600f;   // 845：容納 7 個分頁（含「雜物」），避免分頁列把視窗撐寬
+        private const float BaseW = 845f, BaseScrollH = 600f;   // 與完整版同寬，路線地圖版面不變
         private static Rect rect;
         private static float rectScale;
         private static Vector2 scroll;
         private static int tab;
-        private static readonly string[] tabs = { "骰子選項", "屬性銀兩", "戰鬥養成", "事件攻略", "事件任務", "雜物", "系統" };
-
-        private static string diceIn, moneyIn = "0", fateIn = "0", statIn = "100";
-
-        // 不列魅力：遊戲只在列舉與語系表留有此屬性，沒有任何劇本、事件或介面使用它；改列有判定的廚藝
-        private static readonly GameStatType[] PersonStats =
-            { GameStatType.體力, GameStatType.內力, GameStatType.陰陽內功, GameStatType.輕功, GameStatType.廚藝, GameStatType.學問, GameStatType.嘴力, GameStatType.道德, GameStatType.修養, GameStatType.心理衛生 };
-        private static readonly GameStatType[] SectStats =
-            { GameStatType.門派資產, GameStatType.門派名聲, GameStatType.門派人數, GameStatType.向心力, GameStatType.個人貢獻度 };
+        private static readonly string[] tabs = { "事件攻略", "事件任務", "選項提示" };
 
         public static void Draw(Plugin plugin)
         {
@@ -52,11 +42,11 @@ namespace LegendOfMortal_InternalMod.UI
                 // 放在左上 HUD（貢獻度／日期，約到 y=170）下方
                 rect = new Rect(S.Px(60), S.Px(185), S.Px(BaseW), 0);
             }
-            rect = GUILayout.Window(WindowId, rect, id => DrawMain(plugin), "唐門密卷", GUILayout.Width(S.Px(BaseW)));
+            rect = GUILayout.Window(WindowId, rect, id => DrawMain(plugin), "唐門密卷 Lite", GUILayout.Width(S.Px(BaseW)));
 
             // 路線地圖的事件詳情視窗；是否顯示只在 Layout 決定，同一幀各事件一致
             if (Event.current.type == EventType.Layout)
-                mapPopup = tab == 3 && guideSub == 0 && guideItems != null && guideError == null && GuideMapView.PopupOpen;
+                mapPopup = tab == 0 && guideSub == 0 && guideItems != null && guideError == null && GuideMapView.PopupOpen;
             popupRect = mapPopup ? GuideMapView.DrawPopup(PopupId, rect, guideNow, EventGuide.PlayerRoutes(guideNow)) : Rect.zero;
         }
 
@@ -75,89 +65,16 @@ namespace LegendOfMortal_InternalMod.UI
             {
                 switch (tab)
                 {
-                    case 0: DrawDice(); break;
-                    case 1: DrawStats(); break;
-                    case 2: DrawBattle(); break;
-                    case 3: DrawGuide(); break;
-                    case 4: DrawMissions(plugin); break;
-                    case 5: DrawItems(); break;
-                    case 6: DrawSystem(); break;
+                    case 0: DrawGuide(); break;
+                    case 1: DrawMissions(plugin); break;
+                    default: DrawOptionInfo(); break;
                 }
             }
             finally { GUILayout.EndVertical(); GUILayout.EndScrollView(); }
 
             GUILayout.Space(S.Px(6));
-            GUILayout.Label($"{Cfg.MainMenuKey.Value} 開關視窗　·　拖曳標題列可移動", S.Desc);
+            GUILayout.Label($"{Cfg.MainMenuKey.Value} 開關視窗　·　拖曳標題列可移動　·　《唐門密卷》Lite v1.3.1 Beta", S.Desc);
             GUI.DragWindow(new Rect(0, 0, rect.width, S.Px(60)));
-        }
-
-        // ---- 分頁 ----
-        private static void DrawDice()
-        {
-            Section("天命骰子");
-            Cfg.EnableDiceController.Value = Check(Cfg.EnableDiceController.Value, "啟用骰子控制");
-            int forced = Cfg.ForcedDiceValue.Value;
-            diceIn ??= forced.ToString();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("指定點數", S.Row, GUILayout.Width(S.Px(110)));
-            diceIn = GUILayout.TextField(diceIn, GUILayout.Width(S.Px(90)));
-            if (GUILayout.Button("套用", GUILayout.Width(S.Px(80))) && int.TryParse(diceIn, out var v)) Cfg.ForcedDiceValue.Value = Math.Max(0, v);
-            if (GUILayout.Button("改回隨機", GUILayout.Width(S.Px(110)))) { Cfg.ForcedDiceValue.Value = 0; diceIn = "0"; }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.Label(forced > 0 ? $"目前：固定擲出 <b>{forced}</b>" : "目前：隨機", S.Entry);
-            GUILayout.Label("最終點數仍會加上武學、好感等加成。填 0 等於隨機。", S.Desc);
-
-            Section("選項提示");
-            Cfg.EnableOptionInfo.Value = Check(Cfg.EnableOptionInfo.Value, "在劇情選項後顯示結果（例如 +銀兩）");
-            GUILayout.Label("養成地點的事件與支線任務，請到「事件任務」頁查看。", S.Desc);
-        }
-
-        private static void DrawStats()
-        {
-            Section("銀兩與命運");
-            StatRow("銀兩", GameStatType.銀兩, ref moneyIn);
-            StatRow("命運", GameStatType.命運, ref fateIn);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("行動點", S.Row, GUILayout.Width(S.Px(110)));
-            if (GUILayout.Button("回滿行動點", GUILayout.Width(S.Px(140)))) CheatEngine.AddActionPoints();
-            GUILayout.Space(S.Px(16));
-            Cfg.InfAction.Value = Check(Cfg.InfAction.Value, "無限行動點");
-            GUILayout.EndHorizontal();
-
-            Section("人物屬性");
-            GUILayout.Label("請先打開人物選單再設定；超過上限會自動放寬。", S.Desc);
-            int target = StatTargetRow();
-            StatGrid(PersonStats, target);
-
-            GUILayout.Space(S.Px(6));
-            StatStateRow(GameStatType.心理衛生, "心相狀態");
-            StatStateRow(GameStatType.陰陽內功, "陰陽內功");
-            GUILayout.Label("切換狀態會把數值移到該狀態範圍（最高狀態＝上限），不影響其他數值。", S.Desc);
-
-            Section("門派");
-            GUILayout.Label("請先打開門派介面再設定，數值同上方「設定值」。", S.Desc);
-            StatGrid(SectStats, target);
-        }
-
-        private static void DrawBattle()
-        {
-            Section("戰鬥");
-            Cfg.GodCombat.Value = Check(Cfg.GodCombat.Value, "單挑：我方無敵");
-            Cfg.GodBattle.Value = Check(Cfg.GodBattle.Value, "群戰：我方無敵");
-            BattleCheatPatch.OneHitKill = Check(BattleCheatPatch.OneHitKill, "群戰：一擊必殺");
-            BattleCheatPatch.InfCooldown = Check(BattleCheatPatch.InfCooldown, "技能無冷卻");
-            BattleCheatPatch.InfTime = Check(BattleCheatPatch.InfTime, "戰鬥不限時");
-
-            Section("養成");
-            Cfg.InfPractice.Value = Check(Cfg.InfPractice.Value, "武學：不消耗");
-            Cfg.FastPractice.Value = Check(Cfg.FastPractice.Value, "武學：快速升級");
-            Cfg.InfAlchemy.Value = Check(Cfg.InfAlchemy.Value, "煉丹：不消耗");
-            Cfg.FastAlchemy.Value = Check(Cfg.FastAlchemy.Value, "煉丹：快速升級");
-            Cfg.InfForge.Value = Check(Cfg.InfForge.Value, "鍛造：不消耗");
-            Cfg.FastForge.Value = Check(Cfg.FastForge.Value, "鍛造：快速升級");
-            GUILayout.Label("不消耗：升級不扣點數／銀兩／次數。快速升級：每次點擊直接升一級（同樣不扣）。武學、煉丹、鍛造互不影響。", S.Desc);
-            Cfg.MaxFriendship.Value = Check(Cfg.MaxFriendship.Value, "好感只升不降");
         }
 
         // ---- 事件攻略 ----
@@ -227,7 +144,7 @@ namespace LegendOfMortal_InternalMod.UI
                     for (int j = c; j < GuideStats.Length; j += cols) len = Math.Max(len, GuideStats[j].Name.Length);
                     var (name, type) = GuideStats[i + c];
                     GUILayout.Label(name, S.Row, GUILayout.Width(S.Px(20 * len + 12)));
-                    GUILayout.Label(CheatEngine.GetStat(type).ToString(), S.RowEntry, GUILayout.Width(S.Px(48)));
+                    GUILayout.Label(GetStat(type).ToString(), S.RowEntry, GUILayout.Width(S.Px(48)));
                     GUILayout.Space(S.Px(16));
                 }
                 GUILayout.FlexibleSpace();
@@ -291,97 +208,23 @@ namespace LegendOfMortal_InternalMod.UI
             if (plugin.Events.Count > 0)
             {
                 Section("養成事件");
-                GUILayout.Label("按「指定」後，下次在此地點必定觸發。", S.Desc);
-                foreach (var e in plugin.Events)
-                    EntryCard(e.Key, e.Desc, InfoPatch.TargetEvent == e.Ev ? "已指定" : "指定", () => InfoPatch.TargetEvent = e.Ev);
+                GUILayout.Label("目前地點可能觸發的事件，依機率由高到低排列。", S.Desc);
+                foreach (var e in plugin.Events) EntryCard(e.Key, e.Desc);
             }
             if (plugin.Missions.Count > 0)
             {
                 Section("支線任務");
-                GUILayout.Label("按「必定通過」後，該任務判定必過。", S.Desc);
-                foreach (var m in plugin.Missions)
-                    EntryCard(m.Key, m.Desc, InfoPatch.TargetMission == m.M ? "已選定" : "必定通過", () => InfoPatch.TargetMission = m.M);
+                GUILayout.Label("進行中的支線任務與觸發條件。", S.Desc);
+                foreach (var m in plugin.Missions) EntryCard(m.Key, m.Desc);
             }
         }
 
-        // ---- 雜物 ----
-        private static string itemSearch = string.Empty;
-        private static string itemCountIn = "10";
-        private static bool itemOwnedOnly;
-        private static readonly List<(ItemData Item, string Name)> itemCache = new List<(ItemData, string)>();
-
-        private static void DrawItems()
+        private static void DrawOptionInfo()
         {
-            Section("雜物數量");
-            GUILayout.Label("修改背包「雜物」的數量（藥品、食物等可使用的道具）。書籍與寶物不受影響；改完開一次背包或商店即可看到。", S.Desc);
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("搜尋", S.Row, GUILayout.Width(S.Px(110)));
-            itemSearch = GUILayout.TextField(itemSearch ?? string.Empty, GUILayout.Width(S.Px(200)));
-            if (GUILayout.Button("清除", GUILayout.Width(S.Px(60)))) itemSearch = string.Empty;
-            GUILayout.Space(S.Px(10));
-            itemOwnedOnly = Check(itemOwnedOnly, "只顯示已持有");
-            if (GUILayout.Button("重新整理", GUILayout.Width(S.Px(90)))) itemCache.Clear();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("數量", S.Row, GUILayout.Width(S.Px(110)));
-            itemCountIn = GUILayout.TextField(itemCountIn ?? string.Empty, GUILayout.Width(S.Px(90)));
-            GUILayout.Label("「設為」直接設定；「＋N」在現有數量上累加。", S.Desc);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(S.Px(6));
-            EnsureItemCache();
-            int amount = int.TryParse(itemCountIn, out var parsed) ? parsed : 0;
-            string filter = (itemSearch ?? string.Empty).Trim();
-            int shown = 0;
-            foreach (var entry in itemCache)
-            {
-                if (itemOwnedOnly && entry.Item.CurrentCount <= 0) continue;
-                if (filter.Length > 0 && !Matches(entry, filter)) continue;
-                if (++shown > 400) { GUILayout.Label("筆數過多，請用搜尋縮小範圍。", S.Desc); break; }
-
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(entry.Name, S.Row, GUILayout.Width(S.Px(300)));
-                GUILayout.Label(entry.Item.CurrentCount.ToString(), S.RowEntry, GUILayout.Width(S.Px(70)));
-                if (GUILayout.Button("設為", GUILayout.Width(S.Px(70)))) ItemCheat.Set(entry.Item, amount);
-                if (GUILayout.Button("＋" + amount, GUILayout.Width(S.Px(80)))) ItemCheat.Add(entry.Item, amount);
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
-            }
-            if (shown == 0) GUILayout.Label("沒有符合的雜物（請先載入存檔）。", S.Desc);
-        }
-
-        private static bool Matches((ItemData Item, string Name) entry, string filter)
-            => entry.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
-               || (entry.Item.Id ?? string.Empty).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
-
-        /// <summary>名稱查語系表較貴，快取起來；按「重新整理」時重建。</summary>
-        private static void EnsureItemCache()
-        {
-            if (itemCache.Count > 0) return;
-            if (ItemCheat.Instance == null) return;
-            foreach (var item in ItemCheat.MiscItems())
-                itemCache.Add((item, ItemCheat.Name(item)));
-        }
-
-        private static void DrawSystem()
-        {
-            Section("遊戲速度");
-            GUILayout.BeginHorizontal();
-            GUILayout.Label($"<b>{Cfg.GameSpeed.Value:0.0}</b> 倍", S.Row, GUILayout.Width(S.Px(110)));
-            if (GUILayout.Button("－0.5", GUILayout.Width(S.Px(80)))) Cfg.GameSpeed.Value = Math.Max(0.5f, Cfg.GameSpeed.Value - 0.5f);
-            if (GUILayout.Button("＋0.5", GUILayout.Width(S.Px(80)))) Cfg.GameSpeed.Value = Math.Min(5f, Cfg.GameSpeed.Value + 0.5f);
-            if (GUILayout.Button("恢復正常", GUILayout.Width(S.Px(110)))) Cfg.GameSpeed.Value = 1f;
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.Label("只影響一般遊玩，不會干擾暫停與劇情快轉。", S.Desc);
-
-            Section("關於");
-            GUILayout.Label("《唐門密卷》v1.3.1 Beta（適用 崆峒神威 1.0.6001.0）", S.Desc);
-            GUILayout.Label("設定檔：BepInEx/config/LegendOfMortal_InternalMod.cfg", S.Desc);
+            Section("選項提示");
+            Cfg.EnableOptionInfo.Value = Check(Cfg.EnableOptionInfo.Value, "在劇情選項後顯示結果（例如 +銀兩）");
+            GUILayout.Label("在劇情與議題選項後面直接顯示行動次數、屬性、好感度等變化；關閉後立即生效。", S.Desc);
+            GUILayout.Label("劇情檢查點的條件會記在回想紀錄裡（不寫入存檔）。", S.Desc);
         }
 
         // ---- 元件 ----
@@ -407,119 +250,19 @@ namespace LegendOfMortal_InternalMod.UI
             return value;
         }
 
-        private static void StatRow(string name, GameStatType type, ref string input)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(name, S.Row, GUILayout.Width(S.Px(110)));
-            GUILayout.Label($"目前 {CheatEngine.GetStat(type)}", S.RowDesc, GUILayout.Width(S.Px(150)));
-            input = GUILayout.TextField(input, GUILayout.Width(S.Px(120)));
-            if (GUILayout.Button("設定", GUILayout.Width(S.Px(80))) && int.TryParse(input, out var v)) CheatEngine.SetStat(type, v);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-        }
-
-        private static int StatTargetRow()
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("設定值", S.Row, GUILayout.Width(S.Px(110)));
-            statIn = GUILayout.TextField(statIn, GUILayout.Width(S.Px(120)));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            return int.TryParse(statIn, out var v) ? v : 100;
-        }
-
-        private static string StatLabel(GameStatType t)
-            => t == GameStatType.心理衛生 ? "心相" : t.ToString();
-
-        /// <summary>兩欄：名稱　目前值　[設為 N]</summary>
-        private static void StatGrid(GameStatType[] stats, int target)
-        {
-            for (int i = 0; i < stats.Length; i += 2)
-            {
-                GUILayout.BeginHorizontal();
-                for (int j = i; j < i + 2; j++)
-                {
-                    if (j < stats.Length)
-                    {
-                        var t = stats[j];
-                        GUILayout.Label(StatLabel(t), S.Row, GUILayout.Width(S.Px(110)));
-                        GUILayout.Label(CheatEngine.GetStat(t).ToString(), S.RowEntry, GUILayout.Width(S.Px(80)));
-                        if (GUILayout.Button($"設為 {target}", GUILayout.Width(S.Px(130)))) CheatEngine.SetStat(t, target);
-                    }
-                    if (j == i) GUILayout.Space(S.Px(30));
-                }
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
-                GUILayout.Space(S.Px(4));
-            }
-        }
-
-        /// <summary>
-        /// 分級數值（心相：憂鬱／平靜／快樂；陰陽內功：老陰～老陽）由數值落在哪一段決定
-        /// （GameStatUtils.GetGameStatLevel），這裡直接切換狀態：
-        /// 前幾段取該段中段值，最高段直接設為上限，方便通過門檻。
-        /// </summary>
-        private static void StatStateRow(GameStatType type, string label)
-        {
-            GameStat stat = null;
-            try { stat = PlayerStatManagerData.Instance?.Stats?.Get(type); } catch { }
-            if (stat == null) return;
-            int levels = stat.LevelLength;
-            if (levels <= 1) return;
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(label, S.Row, GUILayout.Width(S.Px(110)));
-            int current = Mathf.Clamp(GameStatUtils.GetGameStatLevel(stat.FinalValue, stat.Max, levels), 0, levels - 1);
-            GUILayout.Label($"目前：{StatLevelLabel(stat, current)}", S.RowDesc);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            // 按鈕另起一行：陰陽內功有 5 段，和標籤放同一行會把視窗撐寬
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(S.Px(110));
-            for (int i = 0; i < levels; i++)
-            {
-                int level = i;
-                if (GUILayout.Button(StatLevelLabel(stat, level), GUILayout.Width(S.Px(90)))) SetStatLevel(type, stat, level);
-            }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-        }
-
-        private static string StatLevelLabel(GameStat stat, int level)
-        {
-            string raw = null;
-            try { raw = stat.LevelText[level]; } catch { }
-            if (string.IsNullOrEmpty(raw)) return level.ToString();
-            string key = "StatLevel/" + raw;
-            try
-            {
-                string text = LocalizationManager.Instance?.LocaleResolver.GetString(key);
-                if (!string.IsNullOrEmpty(text) && text != key) return text;
-            }
-            catch { }
-            return raw;
-        }
-
-        private static void SetStatLevel(GameStatType type, GameStat stat, int level)
-        {
-            int levels = stat.LevelLength;
-            int band = Mathf.Max(1, stat.Max / levels);
-            int value = level >= levels - 1 ? stat.Max : level * band + band / 2;
-            CheatEngine.SetStat(type, value);
-        }
-
-        private static void EntryCard(string key, string desc, string button, Action onClick)
+        private static void EntryCard(string key, string desc)
         {
             GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.BeginHorizontal();
             GUILayout.Label(OnPaper(key), S.Entry);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button(button, GUILayout.Width(S.Px(130)))) onClick();
-            GUILayout.EndHorizontal();
             if (!string.IsNullOrEmpty(desc)) GUILayout.Label(OnPaper(desc), S.Desc);
             GUILayout.EndVertical();
             GUILayout.Space(S.Px(6));
+        }
+
+        private static int GetStat(GameStatType type)
+        {
+            try { return PlayerStatManagerData.Instance.Stats.Get(type).FinalValue; }
+            catch { return 0; }
         }
 
         /// <summary>RichText 的亮色是給遊戲深色底用的，在紙底上換成同色系的深色。</summary>

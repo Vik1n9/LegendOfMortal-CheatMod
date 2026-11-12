@@ -17,15 +17,13 @@ namespace LegendOfMortal_InternalMod.Patches
     /// 1) MissionCheckData.Check() 舊版無參，新版是 Check(PlayerStatManagerData)，
     ///    舊 Prefix(只有 __instance) 雖然 Harmony 寬容仍能打上，但為穩定起見補上參數。
     /// 2) PositionController.OnPositionEnter/Click 在新版仍是無參，保留。
-    /// 其餘 GetStoryText / LoadLuaFunction / Execute / GetRate 簽名未變，直接沿用。
+    /// 其餘 GetStoryText / LoadLuaFunction / Execute 簽名未變，直接沿用。
+    /// Lite 版只讀不改：拿掉完整版的「指定養成事件必出」「任務必定通過」（GetRate／Check 的 Postfix）。
     /// </summary>
     internal static class InfoPatch
     {
         private static string _originalDialogKey = string.Empty;
         private static PositionController _positionCtrl;
-
-        public static PositionEventData TargetEvent;
-        public static MissionCheckData TargetMission;
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(LuaEnvironment), "LoadLuaFunction")]
@@ -47,6 +45,7 @@ namespace LegendOfMortal_InternalMod.Patches
         {
             try
             {
+                if (!Config.ModConfig.EnableOptionInfo.Value) return;
                 var dict = Core.LuaParser.Instance.OptionResult;
                 if (!dict.TryGetValue(key, out var acts)) return;
                 string text = Core.LuaParser.Description(acts);
@@ -124,29 +123,6 @@ namespace LegendOfMortal_InternalMod.Patches
                 LogCheckpoint("觸發劇情分支檢查點:", items);
             }
             catch { }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(PositionEventData), "GetRate")]
-        public static void GetRate_Postfix(PositionEventData __instance, ref int __result)
-        {
-            if (TargetEvent == __instance)
-            {
-                __result = 99999;
-                TargetEvent = null;
-            }
-        }
-
-        // 新版簽名 Postfix 也要帶 playerStat（可省略，但寫上更穩）
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(MissionCheckData), "Check")]
-        public static void MissionCheck_Postfix(MissionCheckData __instance, PlayerStatManagerData playerStat, ref bool __result)
-        {
-            if (TargetMission == __instance)
-            {
-                __result = true;
-                TargetMission = null;
-            }
         }
 
         private static void HandleDialogChange(PositionController instance, bool addSuffix, string suffix = "")

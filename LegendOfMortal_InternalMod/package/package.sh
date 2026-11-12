@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# 打包給玩家的發行版：
-#   dist/LegendOfMortal_InternalMod_v<版本>_full.zip         BepInEx 5.4.23.5 + MOD，解壓到遊戲資料夾即可
-#   dist/LegendOfMortal_InternalMod_v<版本>_plugin_only.zip  只有 MOD，給已裝 BepInEx 5 的玩家
+# 打包給玩家的 Lite 發行版（事件攻略／事件任務／選項提示，不含作弊）：
+#   dist/LegendOfMortal_InternalMod_Lite_v<版本>_full.zip         BepInEx 5.4.23.5 + MOD，解壓到遊戲資料夾即可
+#   dist/LegendOfMortal_InternalMod_Lite_v<版本>_plugin_only.zip  只有 MOD，給已裝 BepInEx 5 的玩家
 # BepInEx 從官方 GitHub 下載並驗 sha256，不從本機遊戲資料夾複製（避免混入 config/cache/日誌）。
 set -euo pipefail
 
@@ -19,12 +19,12 @@ BEPINEX_SHA256="82f9878551030f54657792c0740d9d51a09500eeae1fba21106b0c441e6732c4
 # BepInPlugin 版本只能是純數字；測試版可用 RELEASE_VERSION=1.2beta 覆寫發行檔名
 # （不用 VERSION：環境變數會被 MSBuild 當成 Version 屬性）
 VERSION="${RELEASE_VERSION:-$(grep -oP 'BepInPlugin\("[^"]+", "[^"]+", "\K[0-9.]+' "$PROJ/Plugin.cs")}"
-NAME="LegendOfMortal_InternalMod_v$VERSION"
+NAME="LegendOfMortal_InternalMod_Lite_v$VERSION"
 echo "版本 $VERSION"
 
 # 1. 編譯（遊戲沒開時 post-build 也會順便部署到本機遊戲）
 "$DOTNET" build "$PROJ" -c Release -nologo -v q
-DLL="$PROJ/bin/Release/net48/LegendOfMortal_InternalMod.dll"
+DLL="$PROJ/bin/Release/net48/LegendOfMortal_InternalMod_Lite.dll"
 
 # 2. 取得並驗證 BepInEx
 mkdir -p "$CACHE"
@@ -42,8 +42,8 @@ readme() { printf '\xEF\xBB\xBF'; sed "s/{VERSION}/$VERSION/" "$HERE/README.txt"
 mkdir -p "$STAGE/full" "$STAGE/plugin"
 unzip -q "$CACHE/$BEPINEX_ZIP" -d "$STAGE/full"
 for root in "$STAGE/full" "$STAGE/plugin"; do
-    mkdir -p "$root/BepInEx/plugins/LegendOfMortal_InternalMod"
-    cp "$DLL" "$root/BepInEx/plugins/LegendOfMortal_InternalMod/"
+    mkdir -p "$root/BepInEx/plugins/LegendOfMortal_InternalMod_Lite"
+    cp "$DLL" "$root/BepInEx/plugins/LegendOfMortal_InternalMod_Lite/"
     readme > "$root/README.txt"
     sed 's/$/\r/' "$REPO/LICENSE" > "$root/LICENSE.txt"
     sed 's/$/\r/' "$REPO/NOTICE-wiki-data.md" > "$root/NOTICE-wiki-data.txt"

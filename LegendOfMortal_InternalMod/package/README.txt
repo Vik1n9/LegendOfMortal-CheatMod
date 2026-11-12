@@ -111,6 +111,24 @@ Linux / Steam Deck 請一併清空啟動選項。
   （GitHub：https://github.com/Mr-Smilin/LoM-wiki）
   事件攻略的路線、分歧條件、結局圖鑑，以及事件任務的養成事件名稱，
   都依 wiki 整理。感謝所有編輯與貢獻者。
+  貢獻者名單：https://smilin.net/LoM-wiki/json/contributors.json
+
+
+■ License
+----------------------------------------
+- Source code: MIT License (see LICENSE.txt).
+- Wiki-derived data used by Event Guide and Event Missions: from LoM-Wiki
+  (https://smilin.net/LoM-wiki/), used under CC BY-NC-SA 4.0.
+  Team / contributor list: https://smilin.net/LoM-wiki/json/contributors.json
+  Non-commercial use only; redistribution must keep the same license.
+- 本站不保證內容的絕對正確性、即時性與完整性。若因使用本站資料而產生任何客訴或爭議，
+  本站概不負責。
+- 若未來發現貴 App 違反上述承諾（如轉為商業營利、未落實姓名標示、影響本站伺服器運作），
+  本站有權依照CC 4.0 有效期間及終止條款，單方面終止授權，並要求貴方於指定時間內將源自
+  本站之資料全數下架。
+- Game images belong to the original developer (原始鳥熊 Obb Studio Inc.) and are not covered by
+  CC BY-NC-SA 4.0; obtain permission from the original authors if needed.
+- See NOTICE-wiki-data.txt for details.
 
 
 ■ 第三方元件

@@ -1,5 +1,5 @@
 # 《唐門密卷》Lite
-《活俠傳》（Legend of Mortal）內置 MOD《唐門密卷》的 **Lite 版**，目前版本 **v1.3.1 Beta**。
+《活俠傳》（Legend of Mortal）內置 MOD《唐門密卷》的 **Lite 版**，目前版本 **v1.3.2 Beta**。
 
 > [!NOTE]
 > 這是 `lite` 分支：只保留**事件攻略**、**事件任務**（只列出，不指定）、**選項提示**三項功能，給只想看攻略、不想動到遊戲數值的玩家使用。
@@ -20,7 +20,7 @@
 
 ## 安裝
 
-1. 到 [v1.3.1 Beta 發佈頁](../../releases/tag/v1.3.1beta) 下載 `LegendOfMortal_InternalMod_Lite_v1.3.1beta_full.zip`。
+1. 到 [v1.3.2 Beta 發佈頁](../../releases/tag/v1.3.2beta) 下載 `LegendOfMortal_InternalMod_Lite_v1.3.2beta_full.zip`。
    （已安裝 BepInEx 5 的玩家可改下載 `plugin_only` 版。）
 2. Steam 收藏庫對《活俠傳》按右鍵 → 管理 → 瀏覽本機檔案。
 3. 把壓縮檔內容全部解壓到該資料夾（`winhttp.dll` 要和 `Mortal.exe` 在同一層）。
@@ -99,6 +99,13 @@
 - DLL 名稱為 `LegendOfMortal_InternalMod_Lite.dll`，安裝在 `BepInEx/plugins/LegendOfMortal_InternalMod_Lite/`。
 - 唯一的 Harmony 補丁是 `InfoPatch`：只讀取劇本與任務資料、在選項文字後附加說明；完整版中改變養成事件機率與任務判定的部分已移除。
 - 打包：`LegendOfMortal_InternalMod/package/package.sh`，輸出 `dist/LegendOfMortal_InternalMod_Lite_v<版本>_*.zip`。
+
+## v1.3.2 Beta 更新內容
+
+- 首個 Lite 版：只含事件攻略、事件任務（只列出）、選項提示，不含任何作弊功能。
+- 事件任務：依目前條件上色（綠＝會觸發、紅＝條件不足），會觸發的排在前面。
+- 路線地圖：主線與目前心上人的結緣線分頁綠底；非心上人的結緣線方塊不顯示綠底；心上人變更時自動切頁。
+- 路線地圖的顏色說明簡化為「綠底＝可進入，紅底＝無法達成」。
 
 ## v1.3.1 Beta 更新內容
 

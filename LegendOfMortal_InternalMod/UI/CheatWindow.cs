@@ -73,7 +73,7 @@ namespace LegendOfMortal_InternalMod.UI
             finally { GUILayout.EndVertical(); GUILayout.EndScrollView(); }
 
             GUILayout.Space(S.Px(6));
-            GUILayout.Label($"{Cfg.MainMenuKey.Value} 開關視窗　·　拖曳標題列可移動　·　《唐門密卷》Lite v1.3.1 Beta", S.Desc);
+            GUILayout.Label($"{Cfg.MainMenuKey.Value} 開關視窗　·　拖曳標題列可移動　·　《唐門密卷》Lite v1.3.2 Beta", S.Desc);
             GUI.DragWindow(new Rect(0, 0, rect.width, S.Px(60)));
         }
 

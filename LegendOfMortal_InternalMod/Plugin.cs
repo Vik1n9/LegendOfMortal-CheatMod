@@ -14,7 +14,7 @@ namespace LegendOfMortal_InternalMod
     /// 不含骰子控制、數值修改或任何改變判定結果的補丁；唯一的 Harmony 補丁 InfoPatch 只讀取並附加顯示文字。
     /// GUID 與完整版相同：兩者同時安裝時 BepInEx 只會載入其中一個，避免兩個視窗互搶快捷鍵。
     /// </summary>
-    [BepInPlugin("LegendOfMortal_InternalMod", "唐門密卷 Lite", "1.3.1")]
+    [BepInPlugin("LegendOfMortal_InternalMod", "唐門密卷 Lite", "1.3.2")]
     public class Plugin : BaseUnityPlugin
     {
         public static Plugin Instance { get; private set; }
@@ -35,7 +35,7 @@ namespace LegendOfMortal_InternalMod
             _harmony = new Harmony("LegendOfMortal_InternalMod");
             try { _harmony.PatchAll(typeof(Patches.InfoPatch)); LogInfo("補丁已套用：選項提示／事件任務"); }
             catch (System.Exception ex) { LogError($"補丁 選項提示／事件任務 失敗: {ex.Message}"); }
-            LogInfo("《唐門密卷》Lite v1.3.1 Beta 載入成功（適配 v1.0.6001.0 崆峒神威）");
+            LogInfo("《唐門密卷》Lite v1.3.2 Beta 載入成功（適配 v1.0.6001.0 崆峒神威）");
 
             // Update/OnGUI 交給自建常駐物件，不依賴 BepInEx_Manager 存活
             ModRunner.Ensure("Awake");
